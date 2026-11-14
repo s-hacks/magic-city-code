@@ -30,7 +30,7 @@ describe("generator offline path (no Claude)", () => {
     expect(Math.max(...m.levels.map((l) => l.maxPlacements))).toBe(placements);
     expect(m.approved).toBe(false);
     expect(validateMission(m, haveData ? city : loadCity()).ok).toBe(true);
-    expect(out.response.problem.status).toBe("mission");
+    expect(out.response.problem.status).toBe("new"); // becomes "mission" only on approval
     expect(store.getMission(m.id)).toBeDefined();
   });
 
