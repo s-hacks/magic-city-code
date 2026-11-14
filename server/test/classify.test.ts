@@ -1,3 +1,4 @@
+// Checks the keyword fallback that picks a mission theme when there is no AI.
 import { describe, expect, it } from "vitest";
 import { classifyProblem } from "../src/classify";
 import { themeSpec } from "../src/templates";

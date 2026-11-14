@@ -1,3 +1,4 @@
+// Checks mission validation: the schema, levels, and whether code looks like Python.
 import { describe, expect, it } from "vitest";
 import { looksLikePython, validateMission } from "../src/validate";
 import { city, mission } from "./fixtures";
