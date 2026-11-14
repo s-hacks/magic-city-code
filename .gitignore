@@ -9,3 +9,4 @@ data/.cache/
 data/.venv/
 __pycache__/
 server/data/store.json
+web/scripts/.osmnx-cache/

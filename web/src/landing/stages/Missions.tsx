@@ -50,7 +50,7 @@ const challengeCards: Card[] = Object.values(challenges).map((c) => ({
   kind: 'Route',
   place: c.neighborhood,
   partner: c.tags.join(' · '),
-  task: 'Write a shortest-path search on Birmingham’s real walking network and find the fastest way to fresh food, even when streets flood.',
+  task: c.summary ?? 'Write a shortest-path search on Birmingham’s real walking network and find the fastest way to fresh food, even when streets flood.',
   status: `Code challenge · ${c.difficulty}`,
   href: `/challenge/${c.id}`,
   levels: [],

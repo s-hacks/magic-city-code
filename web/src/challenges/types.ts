@@ -9,7 +9,7 @@ export interface BaseTest { id: string; name: string; visible: boolean }
 
 export interface Verdict {
   ok: boolean;
-  kind: 'pass' | 'crash' | 'timeout' | 'type' | 'empty' | 'endpoints' | 'gap' | 'closed' | 'longer';
+  kind: 'pass' | 'crash' | 'timeout' | 'type' | 'empty' | 'endpoints' | 'gap' | 'closed' | 'longer' | 'wrong';
   title: string;
   detail: string;
   line?: number; // editor line to underline
@@ -28,6 +28,22 @@ export interface Viz<T extends BaseTest> {
   destroy(): void;
 }
 
+/** Optional page wording, so the shared challenge page fits challenges that are not about walking routes. */
+export interface ChallengeUi {
+  /** Label of the map toggle (sets RunOptions.flood). null hides it. Default: "Flood mode". */
+  toggle?: string | null;
+  /** Map legend rows: [swatch class, label]. */
+  legend?: [string, string][];
+  /** Shown before the first run. */
+  hint?: string;
+  /** Shown when every test passes. */
+  accepted?: string;
+  /** "Compare with …" button after two failed submits. null hides it. Default: "best route". */
+  ghostLabel?: string | null;
+  /** Offered when every test passes. */
+  next?: { id: string; label: string };
+}
+
 export interface Challenge<D, T extends BaseTest> {
   id: string;
   title: string;
@@ -44,4 +60,7 @@ export interface Challenge<D, T extends BaseTest> {
   check(test: T, run: TestRun, data: D, opts: RunOptions): Verdict;
   Description: (p: { data: D }) => ReactNode;
   createViz(map: MLMap, data: D): Viz<T>;
+  ui?: ChallengeUi;
+  /** One sentence for cards that list the challenge. */
+  summary?: string;
 }

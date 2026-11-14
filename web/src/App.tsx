@@ -36,7 +36,8 @@ function ChallengeRoute() {
   const ch = challenges[id as keyof typeof challenges];
   if (!ch) return <Navigate to="/" replace />;
   // The registry mixes challenge data types; the page is generic over them.
-  return <ChallengePage ch={ch as Parameters<typeof import("./pages/Challenge").default>[0]["ch"]} theme={dayMode ? "day" : "night"} onHome={() => nav("/#missions")} onList={() => nav("/challenges")} onTheme={toggleDay} />;
+  // key: a fresh page (map, editor, results) for each challenge, so "next level" starts clean.
+  return <ChallengePage key={id} onOpen={(next) => nav(`/challenge/${next}`)} ch={ch as Parameters<typeof import("./pages/Challenge").default>[0]["ch"]} theme={dayMode ? "day" : "night"} onHome={() => nav("/#missions")} onList={() => nav("/challenges")} onTheme={toggleDay} />;
 }
 
 function clearKeys(store: Storage) {

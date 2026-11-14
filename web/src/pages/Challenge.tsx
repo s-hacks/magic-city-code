@@ -19,7 +19,11 @@ const store = { // per-viewer draft; storage may be unavailable
   set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* ignore */ } },
 };
 
-export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome, onList, onTheme }: { ch: Challenge<D, T>; theme: ThemeName; onHome: () => void; onList: () => void; onTheme: () => void }) {
+export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome, onList, onTheme, onOpen }: { ch: Challenge<D, T>; theme: ThemeName; onHome: () => void; onList: () => void; onTheme: () => void; onOpen?: (id: string) => void }) {
+  const ui = ch.ui ?? {};
+  const toggleLabel = ui.toggle === undefined ? 'Flood mode' : ui.toggle;
+  const ghostLabel = ui.ghostLabel === undefined ? 'best route' : ui.ghostLabel;
+  const legend = ui.legend ?? [['blue', 'explored'], ['gold', 'your route'], ['orange', 'problem / flooded']];
   const mapBox = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const viz = useRef<Viz<T> | null>(null);
@@ -174,7 +178,7 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
       const key = e.key.toLowerCase();
       if (key === 'r') execute('run');
       if (key === 's') execute('submit');
-      if (key === 'f') toggleFlood();
+      if (key === 'f' && toggleLabel) toggleFlood();
       if (key === '1') editor.current?.setCode(ch.solution);
       if (key === '0') editor.current?.setCode(ch.starterCode);
       if (key === ' ' && len) { e.preventDefault(); setPlaying((p) => !p); }
@@ -230,14 +234,14 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
         <div className="cmap">
           <div ref={mapBox} className="cmap-canvas" />
           <div className="map-legend">
-            <span><i className="sw blue" /> explored</span>
-            <span><i className="sw gold" /> your route</span>
-            <span><i className="sw orange" /> problem / flooded</span>
-            {ghost && <span><i className="sw ghost" /> best route</span>}
+            {legend.map(([sw, label]) => <span key={label}><i className={`sw ${sw}`} /> {label}</span>)}
+            {ghost && ghostLabel && <span><i className="sw ghost" /> {ghostLabel}</span>}
           </div>
-          <button className={`flood-toggle ${flood ? 'on' : ''}`} aria-pressed={flood} onClick={toggleFlood} title="Flood mode (F)">
-            <span className="knob" /> Flood mode
-          </button>
+          {toggleLabel && (
+            <button className={`flood-toggle ${flood ? 'on' : ''}`} aria-pressed={flood} onClick={toggleFlood} title={`${toggleLabel} (F)`}>
+              <span className="knob" /> {toggleLabel}
+            </button>
+          )}
           {len > 0 && (
             <div className="timeline glass">
               <button className="icon-btn solid" onClick={() => (k >= len ? (scrub(0), setPlaying(true)) : setPlaying((p) => !p))} aria-label={playing ? 'Pause' : 'Play'}>
@@ -253,9 +257,9 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
           <div className="results-head">
             <span className="eyebrow">{mode === 'submit' ? 'Submission' : 'Test results'}</span>
             {rows.length > 0 && <span className={`score ${accepted ? 'ok' : ''}`}>{accepted ? 'Accepted' : `${passed} / ${rows.length} passed`}</span>}
-            {fails >= 2 && cur?.verdict && !cur.verdict.ok && (
+            {fails >= 2 && ghostLabel && cur?.verdict && !cur.verdict.ok && (
               <button className="btn ghost small" aria-pressed={ghost} onClick={() => { viz.current?.ghost(!ghost); setGhost(!ghost); }}>
-                {ghost ? 'Hide' : 'Compare with'} best route
+                {ghost ? 'Hide' : 'Compare with'} {ghostLabel}
               </button>
             )}
           </div>
@@ -278,9 +282,14 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
               <div className="tiny">{cur.test.visible || cur.verdict ? cur.test.name : 'Hidden test'}{cur.run ? ` · ${cur.run.ms} ms · ${(cur.run.events.length / 3).toLocaleString()} steps` : ''}</div>
             </div>
           ) : (
-            <p className="muted small-p">Press <strong>Run</strong> to try the two sample cases and watch your code explore the streets. <strong>Submit</strong> also runs hidden tests.</p>
+            <p className="muted small-p">{ui.hint ?? <>Press <strong>Run</strong> to try the two sample cases and watch your code explore the streets. <strong>Submit</strong> also runs hidden tests.</>}</p>
           )}
-          {accepted && <div className="accepted">All {rows.length} tests passed. Every kid on this list can find their way to fresh food.</div>}
+          {accepted && (
+            <div className="accepted">
+              {ui.accepted ?? `All ${rows.length} tests passed. Every kid on this list can find their way to fresh food.`}
+              {ui.next && onOpen && <> <button className="link-btn" onClick={() => onOpen(ui.next!.id)}>{ui.next.label} →</button></>}
+            </div>
+          )}
         </div>
       </section>
     </div>
