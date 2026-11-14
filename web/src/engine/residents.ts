@@ -1,10 +1,14 @@
 // Resident dots: about 3,000 little "homes" spread over the mission's blocks.
-// Each block gets dots in proportion to its need (at least one if it has any need).
-// Dots are scattered inside the block's real shape using a random generator seeded by
-// the block's id, so they sit in exactly the same spots on every run.
+// Each block gets dots in proportion to its households (how many homes are really there),
+// and at least one if it has any households or any need. We do NOT spread dots by need:
+// that packed thin high-need blocks into bright bands with hard edges.
+// Dots are scattered over the block's whole shape (not clipped to the mission box, since
+// the whole block is counted) using a random generator seeded by the block's id, so they
+// sit in exactly the same spots on every run.
 // Each dot also carries a weight: the block's need divided by its number of dots.
 // The score adds up these weights, so a block's whole need is always counted, split
 // evenly over its dots, and part of a block can be covered while the rest is not.
+// Dots in a block with no need weigh 0: they still glow by walk time but don't change the score.
 import type { Area, LonLat, NeedColumn, ResidentStatus } from "@mcc/shared";
 import { pointInPolygon, polygonBbox } from "./geo";
 import { needOf } from "./areas";
@@ -24,18 +28,21 @@ export interface ResidentHome {
   noCarWeight: number; // share of the block's no-car households this dot stands for
 }
 
-/** How many dots each area gets. Same order as `areas`. */
+/**
+ * How many dots each area gets, in proportion to households. Same order as `areas`.
+ * Any area with households or need gets at least one dot, so its need is never dropped.
+ */
 export function dotsPerArea(areas: Area[], column: NeedColumn, target = TARGET_RESIDENT_DOTS): number[] {
-  let total = 0;
-  for (const area of areas) total += needOf(area, column);
+  let totalHouseholds = 0;
+  for (const area of areas) totalHouseholds += needOf(area, "households");
   const counts: number[] = [];
   for (const area of areas) {
+    const households = needOf(area, "households");
     const need = needOf(area, column);
-    if (need <= 0 || total <= 0) {
-      counts.push(0);
-      continue;
-    }
-    counts.push(Math.max(1, Math.round((target * need) / total)));
+    let count = 0;
+    if (households > 0 && totalHouseholds > 0) count = Math.round((target * households) / totalHouseholds);
+    if (count < 1 && (households > 0 || need > 0)) count = 1;
+    counts.push(count);
   }
   return counts;
 }
