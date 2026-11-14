@@ -19,8 +19,14 @@ export type GenerateResponse =
   | { status: "ok"; mission: Mission; problem: ProblemCard; source: "ai" | "fallback" }
   | { status: "unsupported"; reason: string; problem: ProblemCard };
 
+/** A mission with every level's solution removed. The only mission shape the browser may send to the server. */
+export type PublicMission = Omit<Mission, "levels"> & {
+  levels: Omit<Mission["levels"][number], "solution">[];
+};
+
 export interface CoachRequest {
-  mission: Mission;
+  missionId: string; // the server uses its own stored copy
+  mission?: PublicMission; // only for a mission the server doesn't have; never carries solutions
   levelIndex: number;
   code: string;
   lastError?: string;
@@ -38,7 +44,9 @@ export interface Proposal {
   partner: string;
   neighborhood: string;
   levelIndex: number;
-  code: string;
+  code: string; // the exact code that produced before/after
+  thing?: string; // mission.thing, e.g. "pickup hub"
+  hubs?: number; // how many were placed
   before: number; // coverage 0..1
   after: number;
   helped: number;
