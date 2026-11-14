@@ -3,16 +3,21 @@
 //
 // Steps:
 //  1. Check the actions against the rules; keep only the valid hubs.
-//  2. Food sources = every store in the city + the placed hubs.
-//  3. For each mission block, find the nearest food source from the block's center.
-//     A block is "covered" if that estimated walk is within the mission's limit.
-//     Coverage = covered need / total need, where need is the mission's need column
-//     (for example households with no car). So bigger blocks count for more.
-//  4. Make the resident dots (same spots every run), each walking to its own nearest source.
+//  2. Sources = what already exists (every grocery store in the city, or nothing when
+//     mission.existingSources is "none") + the placed hubs.
+//  3. For each resident dot, find the nearest source from the dot's own home.
+//     A dot is "near" if that estimated walk is within the mission's limit.
+//  4. Score with dot weights. Each dot stands for (block need / dots in that block), where
+//     need is the mission's need column (for example households with no car).
+//       coverage       = weight of near dots / total need
+//       needCovered    = weight of near dots
+//       avgWalkMinutes = weight-averaged walk over all dots
+//       helped         = needCovered now - needCovered with no hubs
 //
-// Why coverage uses block centers and not dots: the Census counts are per block, so the
-// center is the honest unit, and the number does not wobble with dot placement.
-// Dots are the picture; block centers are the score.
+// Why dots and not block centers: a block is not a point. Scoring at the center made a
+// store 10.3 minutes from a center count for nobody, even when half the block lives
+// closer. Dots spread each block's need over its real shape. Dot positions are seeded,
+// so the score is the same on every run.
 import type { Action, CityData, Level, Metrics, Mission, PlacedHub, ResidentDot, Result } from "@mcc/shared";
 import { walkRadiusMeters } from "./geo";
 import { checkActions } from "./rules";
@@ -35,55 +40,57 @@ function hubSources(placed: PlacedHub[]): FoodSource[] {
   return sources;
 }
 
-function nearestWithHubs(from: [number, number], storeNearest: Nearest, hubs: FoodSource[]): Nearest {
-  let best = storeNearest;
+function nearestWithHubs(from: [number, number], existingNearest: Nearest, hubs: FoodSource[]): Nearest {
+  let best = existingNearest;
   for (const hub of hubs) best = closerOf(from, best, hub);
   return best;
 }
 
-interface AreaScore {
+interface Outcome {
   needCovered: number;
   avgWalkMinutes: number;
+  residents: ResidentDot[];
 }
 
-/** Score the mission blocks for a given set of hubs. */
-function scoreAreas(prepared: PreparedMission, walkMinutes: number, hubs: FoodSource[]): AreaScore {
-  let needCovered = 0;
+/** Walk every dot to its nearest source and add up the weighted score. */
+function runDots(prepared: PreparedMission, walkMinutes: number, hubs: FoodSource[]): Outcome {
+  // Count near dots per block, then need covered = block need x (near dots / block dots).
+  // Same as adding up dot weights, but a fully covered block counts exactly its need.
+  const nearDots: number[] = prepared.areas.map(() => 0);
   let weightedMinutes = 0;
-  for (let i = 0; i < prepared.areas.length; i++) {
-    const nearest = nearestWithHubs(prepared.areas[i].center, prepared.areaStoreNearest[i], hubs);
-    const need = prepared.need[i];
-    if (nearest.minutes <= walkMinutes) needCovered += need;
-    weightedMinutes += need * nearest.minutes;
-  }
-  const avgWalkMinutes = prepared.needTotal > 0 ? weightedMinutes / prepared.needTotal : 0;
-  return { needCovered, avgWalkMinutes };
-}
-
-function baselineScore(prepared: PreparedMission, walkMinutes: number): AreaScore {
-  const cached = prepared.cache.get("baselineScore") as AreaScore | undefined;
-  if (cached !== undefined) return cached;
-  const score = scoreAreas(prepared, walkMinutes, []);
-  prepared.cache.set("baselineScore", score);
-  return score;
-}
-
-function makeResidents(prepared: PreparedMission, walkMinutes: number, hubs: FoodSource[]): ResidentDot[] {
   const residents: ResidentDot[] = [];
   for (let i = 0; i < prepared.homes.length; i++) {
     const home = prepared.homes[i];
-    const nearest = nearestWithHubs(home.position, prepared.homeStoreNearest[i], hubs);
+    const nearest = nearestWithHubs(home.position, prepared.homeExistingNearest[i], hubs);
+    const status = statusFor(nearest.minutes, walkMinutes);
+    if (status === "near") nearDots[home.areaIndex]++;
+    weightedMinutes += home.weight * nearest.minutes;
     residents.push({
       id: i,
       areaId: home.areaId,
       position: home.position,
       target: nearest.target,
       minutes: Math.round(nearest.minutes * 10) / 10,
-      status: statusFor(nearest.minutes, walkMinutes),
+      status,
       servedBy: nearest.hubSiteId,
     });
   }
-  return residents;
+  let needCovered = 0;
+  for (let a = 0; a < prepared.areas.length; a++) {
+    if (nearDots[a] === 0) continue;
+    needCovered += nearDots[a] === prepared.areaDots[a] ? prepared.areaNeed[a] : (prepared.areaNeed[a] * nearDots[a]) / prepared.areaDots[a];
+  }
+  const avgWalkMinutes = prepared.needTotal > 0 ? weightedMinutes / prepared.needTotal : 0;
+  return { needCovered, avgWalkMinutes, residents };
+}
+
+/** needCovered with no hubs, worked out once per mission. */
+function baselineCovered(prepared: PreparedMission, walkMinutes: number): number {
+  const cached = prepared.cache.get("baselineCovered") as number | undefined;
+  if (cached !== undefined) return cached;
+  const covered = runDots(prepared, walkMinutes, []).needCovered;
+  prepared.cache.set("baselineCovered", covered);
+  return covered;
 }
 
 export function simulate(mission: Mission, actions: Action[], data: CityData, levelIndex = 0): Result {
@@ -92,8 +99,8 @@ export function simulate(mission: Mission, actions: Action[], data: CityData, le
   const { placed, errors } = checkActions(mission, level, actions, data);
   const hubs = hubSources(placed);
 
-  const before = baselineScore(prepared, mission.walkMinutes);
-  const now = hubs.length === 0 ? before : scoreAreas(prepared, mission.walkMinutes, hubs);
+  const now = runDots(prepared, mission.walkMinutes, hubs);
+  const beforeCovered = hubs.length === 0 ? now.needCovered : baselineCovered(prepared, mission.walkMinutes);
   const share = (covered: number) => (prepared.needTotal > 0 ? covered / prepared.needTotal : 0);
 
   const metrics: Metrics = {
@@ -101,8 +108,8 @@ export function simulate(mission: Mission, actions: Action[], data: CityData, le
     avgWalkMinutes: now.avgWalkMinutes,
     needTotal: prepared.needTotal,
     needCovered: now.needCovered,
-    baselineCoverage: share(before.needCovered),
-    helped: now.needCovered - before.needCovered,
+    baselineCoverage: share(beforeCovered),
+    helped: now.needCovered - beforeCovered,
   };
   const ok = errors.length === 0;
   return {
@@ -110,7 +117,7 @@ export function simulate(mission: Mission, actions: Action[], data: CityData, le
     errors,
     placed,
     metrics,
-    residents: makeResidents(prepared, mission.walkMinutes, hubs),
+    residents: now.residents,
     goalMet: ok && metrics.coverage >= level.goal.target - GOAL_EPSILON,
     walkRadiusMeters: walkRadiusMeters(mission.walkMinutes),
   };

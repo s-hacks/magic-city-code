@@ -12,6 +12,8 @@ export const NeedColumnSchema = z.enum([
   "households_no_internet",
 ]);
 
+export const ExistingSourcesSchema = z.enum(["stores", "none"]);
+
 export const GoalSchema = z.object({
   metric: z.literal("coverage"), // share of need within walkMinutes of food
   target: z.number().min(0.05).max(1), // e.g. 0.8 = light up 80%
@@ -45,6 +47,10 @@ export const MissionSchema = z.object({
   siteKinds: z.array(SiteKindSchema).min(1),
   needColumn: NeedColumnSchema,
   walkMinutes: z.number().min(3).max(30), // default 10
+  // What already counts as a source before any hub is placed. "stores" = every grocery
+  // store in the city (food missions). "none" = only the placed hubs (Wi-Fi spots, warming
+  // stations), so the baseline starts at 0. Missing in JSON means "stores".
+  existingSources: ExistingSourcesSchema.default("stores"),
   levels: z.array(LevelSchema).min(1),
   source: z.object({ kind: z.enum(["seed", "resident"]), text: z.string() }),
   approved: z.boolean(), // an adult approved it before students see it
@@ -52,4 +58,10 @@ export const MissionSchema = z.object({
 
 export type Goal = z.infer<typeof GoalSchema>;
 export type Level = z.infer<typeof LevelSchema>;
-export type Mission = z.infer<typeof MissionSchema>;
+export type ExistingSources = z.infer<typeof ExistingSourcesSchema>;
+/**
+ * The mission object. Uses the schema's *input* type so `existingSources` stays optional
+ * for hand-written objects (the engine treats a missing value as "stores").
+ * MissionSchema.parse() always fills it in.
+ */
+export type Mission = z.input<typeof MissionSchema>;

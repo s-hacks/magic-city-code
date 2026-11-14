@@ -2,6 +2,9 @@
 // Each block gets dots in proportion to its need (at least one if it has any need).
 // Dots are scattered inside the block's real shape using a random generator seeded by
 // the block's id, so they sit in exactly the same spots on every run.
+// Each dot also carries a weight: the block's need divided by its number of dots.
+// The score adds up these weights, so a block's whole need is always counted, split
+// evenly over its dots, and part of a block can be covered while the rest is not.
 import type { Area, LonLat, NeedColumn, ResidentStatus } from "@mcc/shared";
 import { pointInPolygon, polygonBbox } from "./geo";
 import { needOf } from "./areas";
@@ -15,7 +18,10 @@ const CENTER_JITTER_DEGREES = 0.0005;
 
 export interface ResidentHome {
   areaId: string;
+  areaIndex: number; // position of the block in the mission's area list
   position: LonLat;
+  weight: number; // share of the block's mission need this dot stands for
+  noCarWeight: number; // share of the block's no-car households this dot stands for
 }
 
 /** How many dots each area gets. Same order as `areas`. */
@@ -35,7 +41,9 @@ export function dotsPerArea(areas: Area[], column: NeedColumn, target = TARGET_R
 }
 
 /** Scatter `count` homes inside one area, always the same way for the same area id. */
-export function homesForArea(area: Area, count: number): ResidentHome[] {
+export function homesForArea(area: Area, areaIndex: number, count: number, column: NeedColumn): ResidentHome[] {
+  const weight = count > 0 ? needOf(area, column) / count : 0;
+  const noCarWeight = count > 0 ? needOf(area, "households_no_car") / count : 0;
   const random = seededRandom(hashString(area.id));
   const box = polygonBbox(area.polygon);
   const homes: ResidentHome[] = [];
@@ -56,7 +64,7 @@ export function homesForArea(area: Area, count: number): ResidentHome[] {
       const dLat = (random() * 2 - 1) * CENTER_JITTER_DEGREES;
       position = [area.center[0] + dLon, area.center[1] + dLat];
     }
-    homes.push({ areaId: area.id, position });
+    homes.push({ areaId: area.id, areaIndex, position, weight, noCarWeight });
   }
   return homes;
 }
@@ -66,7 +74,7 @@ export function makeHomes(areas: Area[], column: NeedColumn, target = TARGET_RES
   const counts = dotsPerArea(areas, column, target);
   const homes: ResidentHome[] = [];
   for (let i = 0; i < areas.length; i++) {
-    for (const home of homesForArea(areas[i], counts[i])) homes.push(home);
+    for (const home of homesForArea(areas[i], i, counts[i], column)) homes.push(home);
   }
   return homes;
 }

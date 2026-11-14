@@ -1,9 +1,10 @@
 // The places a student may choose for a hub, with the facts Python's city.sites() shows:
 // how many families live within the walk limit, how many of them have no car,
-// and how far the site already is from a store. All walking times are estimates.
+// and how far the site already is from a grocery store. All walking times are estimates.
+// "Families nearby" adds up the weights of the resident dots within the walk limit of the
+// site, the same way the coverage score counts people, so the two always agree.
 import type { CityData, Mission, Site, SiteInfo } from "@mcc/shared";
-import { estimateWalkMinutes, inBbox } from "./geo";
-import { needOf } from "./areas";
+import { estimateWalkMinutes, inBbox, walkRadiusMeters } from "./geo";
 import { nearestSource } from "./sources";
 import { prepareMission, sitePosition } from "./prepare";
 
@@ -23,9 +24,11 @@ function roundTo(value: number, digits: number): number {
   return Math.round(value * scale) / scale;
 }
 
+const METERS_PER_DEGREE_LAT = (6_371_000 * Math.PI) / 180;
+
 /**
- * Facts for every candidate site. "Nearby" means the center of a mission block is within
- * the mission's walk limit of the site. Remembered per mission, so calling it again is free.
+ * Facts for every candidate site. "Nearby" means a resident dot is within the mission's
+ * walk limit of the site. Remembered per mission, so calling it again is free.
  */
 export function describeSites(mission: Mission, data: CityData): SiteInfo[] {
   const prepared = prepareMission(mission, data);
@@ -35,12 +38,17 @@ export function describeSites(mission: Mission, data: CityData): SiteInfo[] {
   const result: SiteInfo[] = [];
   for (const site of candidateSites(mission, data)) {
     const position = sitePosition(site);
+    // Quick box check first (a bit bigger than the walk circle) to skip far-away dots cheaply.
+    const latReach = (walkRadiusMeters(mission.walkMinutes) / METERS_PER_DEGREE_LAT) * 1.01;
+    const lonReach = latReach / Math.cos((site.lat * Math.PI) / 180);
     let familiesNearby = 0;
     let familiesWithoutCar = 0;
-    for (const area of prepared.areas) {
-      if (estimateWalkMinutes(position, area.center) > mission.walkMinutes) continue;
-      familiesNearby += needOf(area, mission.needColumn);
-      familiesWithoutCar += needOf(area, "households_no_car");
+    for (const home of prepared.homes) {
+      if (Math.abs(home.position[1] - site.lat) > latReach) continue;
+      if (Math.abs(home.position[0] - site.lon) > lonReach) continue;
+      if (estimateWalkMinutes(position, home.position) > mission.walkMinutes) continue;
+      familiesNearby += home.weight;
+      familiesWithoutCar += home.noCarWeight;
     }
     const nearestStore = nearestSource(position, prepared.stores);
     result.push({

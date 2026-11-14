@@ -1,6 +1,7 @@
 // Work that only depends on the mission and the city data, done once and remembered.
 // Student runs only add a handful of hubs, so everything here is reused between runs:
-// which areas count, how far each area and each dot is from the nearest store, and so on.
+// which areas count, where the resident dots sit, and how far each dot already is
+// from the nearest existing source (grocery stores, or nothing for "none" missions).
 import type { Area, CityData, LonLat, Mission, Site } from "@mcc/shared";
 import { missionAreas, needOf } from "./areas";
 import { makeHomes, type ResidentHome } from "./residents";
@@ -8,14 +9,20 @@ import { nearestSource, storeSources, type FoodSource, type Nearest } from "./so
 
 export interface PreparedMission {
   areas: Area[];
-  need: number[]; // need column value per area, same order as `areas`
-  needTotal: number;
-  areaStoreNearest: Nearest[]; // nearest existing store for each area center
+  areaNeed: number[]; // need column value per area, same order as `areas`
+  areaDots: number[]; // how many resident dots each area got
+  needTotal: number; // total of the mission's need column over its areas
   homes: ResidentHome[];
-  homeStoreNearest: Nearest[]; // nearest existing store for each home
-  stores: FoodSource[];
-  /** Filled in lazily by other modules (baseline result, site descriptions). */
+  homeExistingNearest: Nearest[]; // nearest existing source for each home (before any hub)
+  existing: FoodSource[]; // what already counts as a source: all stores, or none
+  stores: FoodSource[]; // every store in the city (for minutes_to_store), whatever the mission
+  /** Filled in lazily by other modules (baseline score, site descriptions). */
   cache: Map<string, unknown>;
+}
+
+/** Missing means "stores", so older mission JSON keeps working. */
+export function existingSourcesOf(mission: Mission): "stores" | "none" {
+  return mission.existingSources ?? "stores";
 }
 
 /** Everything about a mission that changes the prepared numbers. */
@@ -27,6 +34,7 @@ function missionKey(mission: Mission): string {
     mission.needColumn,
     mission.walkMinutes,
     mission.siteKinds,
+    existingSourcesOf(mission),
   ]);
 }
 
@@ -40,31 +48,34 @@ export function prepareMission(mission: Mission, data: CityData): PreparedMissio
     preparedByData.set(data, byKey);
   }
   const key = missionKey(mission);
-  const existing = byKey.get(key);
-  if (existing !== undefined) return existing;
+  const existingPrepared = byKey.get(key);
+  if (existingPrepared !== undefined) return existingPrepared;
 
   const areas = missionAreas(mission, data);
-  const need: number[] = [];
+  const areaNeed: number[] = [];
   let needTotal = 0;
   for (const area of areas) {
-    const value = needOf(area, mission.needColumn);
-    need.push(value);
-    needTotal += value;
+    const need = needOf(area, mission.needColumn);
+    areaNeed.push(need);
+    needTotal += need;
   }
+
   const stores = storeSources(data.stores);
-  const areaStoreNearest: Nearest[] = [];
-  for (const area of areas) areaStoreNearest.push(nearestSource(area.center, stores));
+  const existing = existingSourcesOf(mission) === "stores" ? stores : [];
   const homes = makeHomes(areas, mission.needColumn);
-  const homeStoreNearest: Nearest[] = [];
-  for (const home of homes) homeStoreNearest.push(nearestSource(home.position, stores));
+  const homeExistingNearest: Nearest[] = [];
+  for (const home of homes) homeExistingNearest.push(nearestSource(home.position, existing));
+  const areaDots: number[] = areas.map(() => 0);
+  for (const home of homes) areaDots[home.areaIndex]++;
 
   const prepared: PreparedMission = {
     areas,
-    need,
+    areaNeed,
+    areaDots,
     needTotal,
-    areaStoreNearest,
     homes,
-    homeStoreNearest,
+    homeExistingNearest,
+    existing,
     stores,
     cache: new Map(),
   };

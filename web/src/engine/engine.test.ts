@@ -10,10 +10,25 @@ import {
   simulate,
   walkRadiusMeters,
 } from "./index";
-import type { Action } from "@mcc/shared";
+import { MissionSchema, type Action, type Result } from "@mcc/shared";
 import { makeCity, makeMission, minutesForLat } from "./fixtures.test-helpers";
 
 const hub = (siteId: string, line?: number): Action => ({ type: "place_hub", siteId, line });
+
+/** Average walk worked out by hand from the dots: each dot weighs (area need / area dots). */
+function dotWeightedAverage(result: Result, needByArea: Record<string, number>): number {
+  const dots: Record<string, number> = {};
+  for (const r of result.residents) dots[r.areaId] = (dots[r.areaId] ?? 0) + 1;
+  let sum = 0;
+  let total = 0;
+  for (const r of result.residents) {
+    const w = needByArea[r.areaId] / dots[r.areaId];
+    sum += w * r.minutes;
+    total += w;
+  }
+  return sum / total;
+}
+const NEED = { A1: 100, A2: 200, A3: 300 };
 
 describe("walk estimate", () => {
   it("is straight-line distance x 1.3 at 80 m per minute", () => {
@@ -59,8 +74,10 @@ describe("baseline", () => {
     expect(result.metrics.baselineCoverage).toBeCloseTo(1 / 6, 10);
     expect(result.metrics.helped).toBe(0);
     expect(result.goalMet).toBe(false);
-    const expectedAvg = (100 * minutesForLat(0.002) + 200 * minutesForLat(0.038) + 300 * minutesForLat(0.068)) / 600;
-    expect(result.metrics.avgWalkMinutes).toBeCloseTo(expectedAvg, 6);
+    // Dots spread around each center, so the average is close to the center-based number.
+    const centerAvg = (100 * minutesForLat(0.002) + 200 * minutesForLat(0.038) + 300 * minutesForLat(0.068)) / 600;
+    expect(Math.abs(result.metrics.avgWalkMinutes - centerAvg)).toBeLessThan(1);
+    expect(result.metrics.avgWalkMinutes).toBeCloseTo(dotWeightedAverage(result, NEED), 1);
   });
 });
 
@@ -77,8 +94,9 @@ describe("placing hubs", () => {
     expect(result.metrics.helped).toBe(200);
     expect(result.goalMet).toBe(true); // level 1 goal is 0.5
     // A1 still walks to the store, A2 to S1, A3 to S1 (closer than the store).
-    const expectedAvg = (100 * minutesForLat(0.002) + 200 * minutesForLat(0.002) + 300 * minutesForLat(0.028)) / 600;
-    expect(result.metrics.avgWalkMinutes).toBeCloseTo(expectedAvg, 6);
+    const centerAvg = (100 * minutesForLat(0.002) + 200 * minutesForLat(0.002) + 300 * minutesForLat(0.028)) / 600;
+    expect(Math.abs(result.metrics.avgWalkMinutes - centerAvg)).toBeLessThan(1);
+    expect(result.metrics.avgWalkMinutes).toBeCloseTo(dotWeightedAverage(result, NEED), 1);
   });
 
   it("two hubs on level 2 cover everyone", () => {
@@ -213,5 +231,63 @@ describe("resident dots", () => {
     city.areas[2].households_no_car = 300_000;
     const result = baseline(makeMission(), city);
     expect(result.residents.filter((r) => r.areaId === "A1").length).toBe(1);
+  });
+});
+
+describe("dot-weighted coverage", () => {
+  it("counts part of a block whose center is just past the limit", () => {
+    // One big block (about 1.1 km tall) whose center is 10.3 estimated minutes from the store.
+    // Scored at the center it would count for nobody; with dots, its nearer half counts.
+    const city = makeCity();
+    const gap = (10.3 * 80) / 1.3 / (6_371_000 * Math.PI / 180); // degrees of latitude for 10.3 minutes
+    const a1 = city.areas[0];
+    const lat = 33.012 + gap;
+    a1.center = [-86.95, lat];
+    a1.polygon = [[[-86.955, lat - 0.005], [-86.945, lat - 0.005], [-86.945, lat + 0.005], [-86.955, lat + 0.005], [-86.955, lat - 0.005]]];
+    expect(minutesForLat(gap)).toBeCloseTo(10.3, 6);
+    const result = baseline(makeMission(), city);
+    expect(result.metrics.needCovered).toBeGreaterThan(10);
+    expect(result.metrics.needCovered).toBeLessThan(90);
+    const a1Dots = result.residents.filter((r) => r.areaId === "A1");
+    const nearShare = a1Dots.filter((r) => r.status === "near").length / a1Dots.length;
+    expect(result.metrics.needCovered).toBeCloseTo(100 * nearShare, 6);
+  });
+
+  it("never drops need: weights over all dots add up to the total", () => {
+    const city = makeCity();
+    city.areas[0].households_no_car = 1;
+    city.areas[1].households_no_car = 200_000;
+    city.areas[2].households_no_car = 300_000;
+    const all = simulate(makeMission(), [hub("S1"), hub("S2")], city, 1);
+    expect(all.metrics.needTotal).toBe(500_001);
+    expect(all.metrics.needCovered).toBe(500_001);
+    expect(all.metrics.coverage).toBe(1);
+  });
+});
+
+describe("existing sources", () => {
+  it("defaults to stores when the JSON leaves it out", () => {
+    const parsed = MissionSchema.parse(makeMission());
+    expect(parsed.existingSources).toBe("stores");
+  });
+
+  it('"none" starts at zero: only placed hubs count', () => {
+    const mission = makeMission({ id: "wifi", existingSources: "none" });
+    const before = baseline(mission, makeCity());
+    expect(before.metrics.coverage).toBe(0);
+    expect(before.metrics.needCovered).toBe(0);
+    expect(before.residents.every((r) => r.status === "far" && r.servedBy === null)).toBe(true);
+    expect(before.residents.every((r) => r.target[0] === r.position[0] && r.target[1] === r.position[1])).toBe(true);
+
+    const after = simulate(mission, [hub("S1")], makeCity());
+    expect(after.metrics.coverage).toBeCloseTo(200 / 600, 10); // only A2; the store no longer helps A1
+    expect(after.metrics.baselineCoverage).toBe(0);
+    expect(after.metrics.helped).toBe(200);
+    expect(after.residents.every((r) => r.servedBy === "S1")).toBe(true);
+  });
+
+  it('"none" still reports minutes_to_store from real stores', () => {
+    const sites = describeSites(makeMission({ id: "wifi", existingSources: "none" }), makeCity());
+    expect(sites[0].minutes_to_store).toBeCloseTo(Math.round(minutesForLat(0.04) * 10) / 10, 6);
   });
 });
