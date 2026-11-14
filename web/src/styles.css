@@ -154,3 +154,23 @@ code { font-family: var(--mono); background: color-mix(in srgb, var(--text) 8%, 
 /* The code card now also holds Sparks, so it gets more of the left column. */
 .cleft { grid-template-rows: minmax(0, .7fr) minmax(0, 1.6fr); }
 @media (max-width: 1000px) { .cleft { grid-template-rows: auto 600px; } }
+
+/* ---------- mission screen in the challenge layout (map on the right) ---------- */
+.mission-screen .ctitle .levels { margin-left: 14px; gap: 6px; }
+.mission-screen .ctitle .pill { padding: 5px 12px; font-size: 13px; }
+.mission-screen .cleft { grid-template-rows: minmax(0, .8fr) minmax(0, 1.6fr); }
+.cbar .pill.status { flex: none; }
+.mission-screen .desc .quote { margin: 4px 0 14px; font-size: 17px; }
+.mission-screen .desc .goal { margin-bottom: 12px; }
+.mission-screen .desc .story, .mission-screen .desc .partner { margin-top: 10px; }
+.mission-code .code-body { flex: 1; min-height: 120px; }
+.mission-code .output { max-height: 26%; }
+.mission-screen .cmap .mcc-map { position: absolute; inset: 0; }
+.mission-screen .cmap .legend { bottom: 12px; max-width: calc(100% - 24px); }
+.mission-screen .cmap .wave { border-radius: 16px; }
+.cmap-loading { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; }
+.mission-results { max-height: 40vh; gap: 8px; }
+.mission-results .meter { margin-top: 2px; }
+.mission-results .skyline { height: 48px; }
+.mission-results .score-num { font-size: 40px; }
+.mission-results .compare-plans { margin-top: 2px; }

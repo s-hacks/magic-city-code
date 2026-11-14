@@ -1,18 +1,21 @@
-// The Mission screen logic: map full screen, two floating panels, and the one loop
+// The Mission screen, in the same layout as a code challenge: description and code (with
+// Sparks) on the left, the map and the results (city-light meter) on the right. The one loop
 //   Run -> Python (worker) -> actions -> engine.simulate -> map animates -> meter fills
 //   -> goal check -> next level unlocks -> proposal.
 // Rules from the map: bump runToken in the same render as the new result; show the meter's
 // new numbers only after onRunComplete, and only for a result with no rule errors.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { Mission, Result, SiteInfo } from "@mcc/shared";
 import { MapView, type MapViewHandle } from "../map/MapView";
 import { Legend } from "../map/Legend";
 import { useCompare } from "../map/useCompare";
 import { useDemoKeys } from "../code/demoKeys";
 import { baseline, describeSites, neighborhoodsSummary, simulate } from "../engine";
-import { TopBar, isTyping } from "../app/TopBar";
-import { Lock } from "../app/icons";
+import { PythonPill, ThemeButton, isTyping, useScreenKeys } from "../app/TopBar";
+import { Lock, Mark } from "../app/icons";
+import { CityMeter } from "../map/CityMeter";
+import { ComparePlans } from "./ComparePlans";
 import type { LayerGroup } from "../map/layerGroups";
 import { themes } from "../theme";
 import { useApp } from "./AppContext";
@@ -73,9 +76,6 @@ export function MissionScreen({ mission }: { mission: Mission }) {
   const busyRef = useRef(false);
   const runTimer = useRef<number>(0);
   const handle = useRef<MapViewHandle>(null);
-  const leftRef = useRef<HTMLElement>(null);
-  const rightRef = useRef<HTMLElement>(null);
-  const [pad, setPad] = useState({ top: 80, bottom: 90, left: 440, right: 560 });
   const { comparing, buttonProps } = useCompare();
   const [hidden, setHidden] = useState<ReadonlySet<LayerGroup>>(new Set());
   const toggleLayer = (g: LayerGroup) =>
@@ -96,23 +96,7 @@ export function MissionScreen({ mission }: { mission: Mission }) {
   const sites: SiteInfo[] | undefined = useMemo(() => (data ? describeSites(mission, data) : undefined), [mission, data]);
   const base = useMemo(() => (data ? baseline(mission, data, levelIndex) : null), [mission, data, levelIndex]);
 
-  // Real panel sizes -> camera padding.
-  useEffect(() => {
-    const measure = () => {
-      const l = leftRef.current?.getBoundingClientRect();
-      const r = rightRef.current?.getBoundingClientRect();
-      setPad({ top: 80, bottom: 80, left: Math.round((l?.right ?? 400) + 16), right: Math.round(window.innerWidth - (r?.left ?? window.innerWidth - 540) + 16) });
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    leftRef.current && ro.observe(leftRef.current);
-    rightRef.current && ro.observe(rightRef.current);
-    window.addEventListener("resize", measure);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, [data]);
+  useScreenKeys();
 
   const setCode = useCallback((c: string) => {
     setCodeState(c);
@@ -284,98 +268,117 @@ export function MissionScreen({ mission }: { mission: Mission }) {
   );
 
   return (
-    <div className="app" data-screen="mission">
-      {base && (
-        <MapView
-          ref={handle}
-          mode="mission"
-          data={data}
-          mission={mission}
-          result={result}
-          baselineResult={base}
-          showBaseline={comparing}
-          runToken={runToken}
-          sites={sites}
-          dayMode={dayMode}
-          cameraPadding={pad}
-          hidden={hidden}
-          onSiteClick={onSiteClick}
-          onRunStep={(s) => setHighlight(s?.line ?? null)}
-          onRunComplete={onRunComplete}
-          onRunCancel={onRunCancel}
-        />
-      )}
-      <div className="vignette" aria-hidden />
-      {shown?.goalMet && <div key={runToken} className="wave" aria-hidden />}
+    <div className="challenge mission-screen">
+      <header className="cbar">
+        <Link className="brand link" to="/" title="Home (H)"><Mark /> Magic City Code</Link>
+        <div className="ctitle">
+          <Link className="crumb link-btn quiet" to="/challenges">Challenges /</Link> {mission.title}
+          <nav className="levels" aria-label="Levels">
+            {mission.levels.map((l, i) => {
+              const locked = i > unlocked;
+              return (
+                <button
+                  key={i}
+                  className="pill"
+                  aria-current={i === levelIndex}
+                  disabled={locked || running}
+                  onClick={() => goLevel(i)}
+                  title={locked ? "Finish the last level to unlock" : `${l.title} · ${l.concept}`}
+                >
+                  {locked ? <Lock /> : null} Level {i + 1}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+        <PythonPill />
+        <ThemeButton />
+      </header>
 
-      <TopBar>
-        <span className="crumb">{hood}</span>
-        {mission.levels.map((l, i) => {
-          const locked = i > unlocked;
-          return (
-            <button
-              key={i}
-              className="pill"
-              aria-current={i === levelIndex}
-              disabled={locked || running}
-              onClick={() => goLevel(i)}
-              title={locked ? "Finish the last level to unlock" : `${l.title} · ${l.concept}`}
-            >
-              {locked ? <Lock /> : null} Level {i + 1}
-            </button>
-          );
-        })}
-      </TopBar>
+      <section className="cleft">
+        <article className="card desc" aria-label="Mission">
+          <MissionPanel mission={mission} hood={hood} levelIndex={levelIndex} />
+        </article>
 
-      <aside className="glass panel mission-panel" aria-label="Mission" ref={leftRef}>
-        {base && data ? (
-          <MissionPanel
-            mission={mission}
-            hood={hood}
-            levelIndex={levelIndex}
-            baseline={base}
-            shown={shown}
+        <div className="card code mission-code" aria-label="Your code">
+          <CodePanel
+            code={code}
+            onChange={onChange}
+            highlightLine={highlight}
+            errorLine={errorLine}
+            onRun={run}
+            running={running}
+            loading={runnerStatus.state === "loading"}
+            canCompare={!!shown}
+            compareProps={buttonProps as unknown as Record<string, unknown>}
             comparing={comparing}
-            data={data}
-            formerStores={formerStores}
-            onProposal={makeProposal}
+            stdout={stdout}
+            problems={runnerStatus.state === "error" ? [`Python could not start: ${runnerStatus.message}`, ...problems] : problems}
+            status={status}
+            success={banner?.text}
+            nextLevel={banner?.next ? levelIndex + 2 : undefined}
+            onNext={() => goLevel(levelIndex + 1)}
+            onProposal={banner ? makeProposal : undefined}
+            coach={coach}
           />
-        ) : (
-          <p className="muted">Loading the city…</p>
-        )}
-      </aside>
-
-      <section className="glass panel code-panel" aria-label="Your code" ref={rightRef}>
-        <CodePanel
-          code={code}
-          onChange={onChange}
-          highlightLine={highlight}
-          errorLine={errorLine}
-          onRun={run}
-          running={running}
-          loading={runnerStatus.state === "loading"}
-          canCompare={!!shown}
-          compareProps={buttonProps as unknown as Record<string, unknown>}
-          comparing={comparing}
-          stdout={stdout}
-          problems={runnerStatus.state === "error" ? [`Python could not start: ${runnerStatus.message}`, ...problems] : problems}
-          status={status}
-          success={banner?.text}
-          nextLevel={banner?.next ? levelIndex + 2 : undefined}
-          onNext={() => goLevel(levelIndex + 1)}
-          onProposal={banner ? makeProposal : undefined}
-          coach={coach}
-        />
+        </div>
       </section>
 
-      <Legend
-        walkMinutes={mission.walkMinutes}
-        showStores={mission.existingSources !== "none"}
-        farLabel={`far from ${words.place}`}
-        nearLabel={`within a ${mission.walkMinutes}-min walk of a ${mission.thing}`}
-        hidden={hidden}
-        onToggle={toggleLayer}
-      />
+      <section className="cright">
+        <div className="cmap">
+          {base && (
+            <MapView
+              ref={handle}
+              mode="mission"
+              data={data}
+              mission={mission}
+              result={result}
+              baselineResult={base}
+              showBaseline={comparing}
+              runToken={runToken}
+              sites={sites}
+              dayMode={dayMode}
+              cameraPadding={{ top: 70, bottom: 70, left: 40, right: 40 }}
+              hidden={hidden}
+              onSiteClick={onSiteClick}
+              onRunStep={(s) => setHighlight(s?.line ?? null)}
+              onRunComplete={onRunComplete}
+              onRunCancel={onRunCancel}
+            />
+          )}
+          {!base && <p className="muted cmap-loading">Loading the city…</p>}
+          {shown?.goalMet && <div key={runToken} className="wave" aria-hidden />}
+          <Legend
+            walkMinutes={mission.walkMinutes}
+            showStores={mission.existingSources !== "none"}
+            farLabel={`far from ${words.place}`}
+            nearLabel={`within a ${mission.walkMinutes}-min walk of a ${mission.thing}`}
+            hidden={hidden}
+            onToggle={toggleLayer}
+          />
+        </div>
+
+        <div className="results card mission-results" aria-label="Results">
+          <div className="results-head">
+            <span className="eyebrow">City lit</span>
+            {shown?.goalMet && <span className="score ok">Goal reached</span>}
+            {shown?.goalMet && <button className="btn primary small" onClick={makeProposal}>Make a proposal →</button>}
+          </div>
+          {base && (
+            <CityMeter
+              coverage={(shown ?? base).metrics.coverage}
+              baselineCoverage={base.metrics.coverage}
+              families={(shown ?? base).metrics.needCovered}
+              target={level.goal.target}
+              goalMet={!!shown?.goalMet}
+              comparing={comparing}
+              unit={words.who}
+            />
+          )}
+          <p className="tiny">Counting {words.who} within a {mission.walkMinutes}-minute walk of {words.place} (straight-line estimate).</p>
+          {shown?.ok && data && <ComparePlans mission={mission} data={data} formerStores={formerStores} levelIndex={levelIndex} result={shown} />}
+        </div>
+      </section>
     </div>
   );
 }

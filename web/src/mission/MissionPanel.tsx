@@ -1,33 +1,25 @@
-// The left glass panel (UI prototype look): the level's concept, the mission title, the
-// resident's words, the goal, the city-light meter, then the extras the real app adds —
-// the honesty note when the mission counts a stand-in group, the story, the plan
-// comparison, and the proposal button. Level pills live in the top bar; Sparks lives at
-// the bottom of the code panel.
-import type { CityData, FormerStore, Mission, Result } from "@mcc/shared";
-import { CityMeter } from "../map/CityMeter";
-import { ComparePlans } from "./ComparePlans";
-import { needsHonestyNote, needWords, pct } from "./text";
+// The mission's description card (left column, same layout as a code challenge): where and
+// which coding idea, the title, the resident's words, the goal, the honesty note when the
+// mission counts a stand-in group, the story and the partner. The city-light meter and the
+// plan comparison live in the results card under the map (MissionScreen).
+import type { Mission } from "@mcc/shared";
+import { needsHonestyNote, pct } from "./text";
 
 export interface MissionPanelProps {
   mission: Mission;
   hood: string;
   levelIndex: number;
-  baseline: Result;
-  shown: Result | null; // the last finished successful run for this level
-  comparing: boolean;
-  data: CityData;
-  formerStores: FormerStore[];
-  onProposal(): void;
 }
 
-export const MissionPanel = ({ mission, hood, levelIndex, baseline, shown, comparing, data, formerStores, onProposal }: MissionPanelProps) => {
+export const MissionPanel = ({ mission, hood, levelIndex }: MissionPanelProps) => {
   const level = mission.levels[levelIndex];
-  const view = shown ?? baseline;
-  const words = needWords(mission);
   return (
     <>
-      <p className="eyebrow">Mission · {level.concept}</p>
-      <h2 className="title">{mission.title}</h2>
+      <p className="eyebrow grad-text">{hood} · Mission</p>
+      <h1>{mission.title}</h1>
+      <div className="tags">
+        <span className="tag">Level {levelIndex + 1}: {level.concept}</span>
+      </div>
       <blockquote className="quote">
         “{mission.residentQuote}”
         <cite>— a neighbor in {hood}</cite>
@@ -39,17 +31,6 @@ export const MissionPanel = ({ mission, hood, levelIndex, baseline, shown, compa
         <span>Light up <strong>{pct(level.goal.target)}</strong> of {hood}.</span>
       </div>
 
-      <CityMeter
-        coverage={view.metrics.coverage}
-        baselineCoverage={baseline.metrics.coverage}
-        families={view.metrics.needCovered}
-        target={level.goal.target}
-        goalMet={!!shown?.goalMet}
-        comparing={comparing}
-        unit={words.who}
-      />
-      <p className="tiny">Counting {words.who} within a {mission.walkMinutes}-minute walk of {words.place} (straight-line estimate).</p>
-
       {needsHonestyNote(mission) && (
         <p className="note-box">Honest note: no public data shows where people sleep outside, so this counts low-income households instead.</p>
       )}
@@ -57,9 +38,6 @@ export const MissionPanel = ({ mission, hood, levelIndex, baseline, shown, compa
         <summary>Read the story</summary>
         <p>{mission.story}</p>
       </details>
-      {shown?.ok && <ComparePlans mission={mission} data={data} formerStores={formerStores} levelIndex={levelIndex} result={shown} />}
-      {shown?.goalMet && <button className="btn primary" onClick={onProposal}>Make a proposal →</button>}
-
       <p className="partner">With {mission.partner}</p>
     </>
   );

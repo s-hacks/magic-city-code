@@ -241,7 +241,13 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     };
     raf = requestAnimationFrame(loop);
 
+    // The map can sit in a card whose size changes after first paint (or with the window):
+    // keep the canvas matched to its box.
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(el);
+
     return () => {
+      ro.disconnect();
       cancelAnimationFrame(raf);
       vsRef.current.timers.forEach((t) => clearTimeout(t));
       window.clearTimeout(styleRetry.current);
