@@ -25,10 +25,8 @@ Demo shortcuts:
 
 | Who | Area |
 |---|---|
-| Pranay | Backend: `server/`, `shared/`, `data/`, the engine |
-| Margulan | Frontend: screens, map, landing page, editor |
-| Gaurav | Challenges and tests |
-| Kavya | Research |
+| Pranay | Backend, challenges and tests: `server/`, `shared/`, `data/`, the engine, `web/src/challenges/`, the test suites |
+| Margulan | Frontend and research: screens, map, landing page, editor, `reports/`, `research_notes/` |
 
 Full folder ownership and the explain-back plan: [SUBMISSION.md](SUBMISSION.md).
 

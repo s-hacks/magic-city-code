@@ -171,7 +171,7 @@ Each entry gives the choice, what was rejected, and the reason. If the reason is
 ### City problems are projects, not single files
 - **Chosen:** a city problem is a small Python project (files, README, tests). A solution is judged by the problem's own tests.
 - **Rejected:** a single editor box with one function.
-- **Reason:** reason: ask Pranay (server) or Gaurav (the seed projects and tests). The commit does not record it.
+- **Reason:** reason: ask Pranay. The commit does not record it.
 
 ### The challenge coach has the same hint-only rule
 - **Chosen:** Sparks gives one hint at a time. The server holds the solution and checks the reply for leaks. A stored hint is the fallback.

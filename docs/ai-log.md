@@ -4,7 +4,7 @@ One entry per meaningful AI-written piece. Dates and files come from `git log ma
 
 Format: date, what was asked, what was kept, what was changed or rejected, and why. "reason: ask <name>" means the reason is not in the plan, a commit or the conversation, so ask the named owner.
 
-Team owners: **Pranay** (backend: server, shared, data, engine), **Margulan** (frontend: screens, map, landing, editor), **Gaurav** (challenges and tests), **Kavya** (research). "Owner area" in each entry names the folder or the AI agent that did the work; the human who owns that folder is listed in [SUBMISSION.md](../SUBMISSION.md).
+Team owners: **Pranay** (backend, challenges and tests: server, shared, data, engine, challenges), **Margulan** (frontend and research: screens, map, landing, editor, reports). "Owner area" in each entry names the folder or the AI agent that did the work; the human who owns that folder is listed in [SUBMISSION.md](../SUBMISSION.md).
 
 ---
 

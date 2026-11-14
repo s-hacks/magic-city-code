@@ -45,33 +45,27 @@ Node 20.17 or newer and pnpm 9. More in the [README](README.md).
 
 ## Who owns what (explain-back)
 
-Four people, four areas. Each person can walk a judge through their own part, and explains someone else's part for two minutes before the demo.
+Two people, two areas. Each person can walk a judge through their own part, and explains the other's part for two minutes before the demo.
 
 | Owner | Area | What they own |
 |---|---|---|
-| **Pranay** | Backend | `server/` (Express routes, mission generator, coach, scrub step, approval gate, fallbacks, city problems API), `shared/` (types and API shapes), `data/` (Census and OpenStreetMap pipeline), and the pure engine in `web/src/engine/` |
-| **Margulan** | Frontend | `web/src/pages/`, `web/src/mission/`, `web/src/map/`, `web/src/landing/`, `web/src/app/`, `theme.ts` and the stylesheets, the workspace screen in `web/src/workspace/`, and the editor and Pyodide runner in `web/src/code/` and `web/src/py/` |
-| **Gaurav** | Challenges and tests | `web/src/challenges/` (Route to Fresh Food, Stray-Dog Van, Water Bill Check, Open Bed, the harnesses and checkers), the challenge data scripts in `web/scripts/`, the seed city-problem projects and their tests in `web/public/data/city-problems/`, and the test suites (`*.test.ts`, `*.node.test.ts`, `server/test/`) |
-| **Kavya** | Research | `reports/` and `research_notes/`, and the real problems and facts behind the missions: `docs/top-problems.md`, `docs/showcase-examples.md`, the problem cards and the sourced facts on the landing page (`web/src/landing/facts.ts`) |
+| **Pranay** | Backend, challenges and tests | `server/` (Express routes, mission generator, coach, scrub step, approval gate, fallbacks, city problems API), `shared/` (types and API shapes), `data/` (Census and OpenStreetMap pipeline), the pure engine in `web/src/engine/`, `web/src/challenges/` (Route to Fresh Food, Stray-Dog Van, Water Bill Check, Open Bed, Stop the Leaks, Grocery Gap, Flood Cut-Off, the harnesses and checkers), the challenge data scripts in `web/scripts/`, the seed city-problem projects and their tests in `web/public/data/city-problems/`, and the test suites (`*.test.ts`, `*.node.test.ts`, `server/test/`) |
+| **Margulan** | Frontend, research | `web/src/pages/`, `web/src/mission/`, `web/src/map/`, `web/src/landing/`, `web/src/app/`, `theme.ts` and the stylesheets, the workspace screen in `web/src/workspace/`, the editor and Pyodide runner in `web/src/code/` and `web/src/py/`, plus `reports/` and `research_notes/` and the real problems and facts behind the missions: `docs/top-problems.md`, `docs/showcase-examples.md`, the problem cards and the sourced facts on the landing page (`web/src/landing/facts.ts`) |
 
 Files that sit between two areas (for example the workspace, which has a server half and a screen half) are owned by whoever wrote that half. The AI log says who asked for each AI-written change.
 
 ### Explain-back plan
 
-Do this once, before the demo. Each pair swaps and the listener explains the other's part back in two minutes, using the files above.
+Do this once, before the demo. Each person explains the other's part back in two minutes, using the files above.
 
 | Explainer | Explains | Starting file |
 |---|---|---|
-| Pranay | Frontend | `web/src/mission/MissionScreen.tsx` |
-| Margulan | Challenges | `web/src/challenges/types.ts` |
-| Gaurav | Research | `reports/Birmingham Alabama city problems.md` |
-| Kavya | Backend | `server/src/app.ts` and `docs/decisions.md` |
+| Pranay | Frontend and research | `web/src/mission/MissionScreen.tsx` and `reports/Birmingham Alabama city problems.md` |
+| Margulan | Backend, challenges and tests | `server/src/app.ts`, `web/src/challenges/types.ts` and `docs/decisions.md` |
 
 Questions each person should be ready for:
-- **Pranay:** why does the student's code return actions instead of drawing? How is a generated mission's target set?
-- **Margulan:** how does the map get its colors? What happens when a run is cancelled?
-- **Gaurav:** how was each pass mark chosen? What do the hidden tests catch that the visible ones do not?
-- **Kavya:** where does each number come from, and what are the honest limits?
+- **Pranay:** why does the student's code return actions instead of drawing? How is a generated mission's target set? How was each challenge's pass mark chosen, and what do the hidden tests catch that the visible ones do not?
+- **Margulan:** how does the map get its colors? What happens when a run is cancelled? Where does each number come from, and what are the honest limits?
 
 ## Open questions (ask an organizer)
 
