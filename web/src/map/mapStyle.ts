@@ -1,63 +1,19 @@
-// Builds the MapLibre base style: OpenFreeMap "positron" restyled at load time.
-// Colors come from the UI tokens in ../theme.ts: graphite land and buildings, quiet
-// roads, dim labels. Day = the same layout on light neutrals for washed-out projectors.
+// Builds the MapLibre base style: OpenFreeMap "positron" restyled at load time with the
+// real-world colors in ./worldColors.ts (blue water, green parks, tinted land use, colored
+// main roads, buildings shaded by height). Positron leaves most land use out, so those
+// fills are added just above the residential layer. Day = a familiar street map;
+// night = the same city after dark.
 // Road and building layers carry metadata.group ("streets" / "buildings") so the
 // legend chips can hide them.
 // If the tile server cannot be reached (6 s timeout), a plain background style is
 // used so the deck.gl lights still show; MapView retries in the background.
 import type { StyleSpecification, LayerSpecification } from "maplibre-gl";
-import { themes, type ThemeName } from "../theme";
+import { buildingColorExpr, landLayers, roadColorExpr, worldFor, type World } from "./worldColors";
 
 const BASE_URL = "https://tiles.openfreemap.org/styles/positron";
 
-interface Look {
-  background: string;
-  park: string;
-  water: string;
-  residential: string;
-  wood: string;
-  waterway: string;
-  buildingLow: string;
-  buildingHigh: string;
-  buildingOpacity: number;
-  motorway: string;
-  major: string;
-  minor: string;
-  casing: string;
-  rail: string;
-  boundary: string;
-  text: string;
-  textHalo: string;
-  textOpacity: number;
-}
-
-function lookFor(name: ThemeName): Look {
-  const t = themes[name];
-  const night = name === "night";
-  return {
-    background: t.land,
-    park: t.park,
-    water: t.water,
-    residential: t.land,
-    wood: t.park,
-    waterway: t.water,
-    buildingLow: t.buildingLow,
-    buildingHigh: t.buildingHigh,
-    buildingOpacity: 0.92,
-    motorway: t.violet, // motorways read violet in the "After Dark" map
-    major: t.roadMajor,
-    minor: t.road,
-    casing: night ? t.land : t.line,
-    rail: t.road,
-    boundary: t.line,
-    text: t.muted,
-    textHalo: t.bg,
-    textOpacity: night ? 0.55 : 0.85,
-  };
-}
-
-const NIGHT_LOOK = lookFor("night");
-const DAY_LOOK = lookFor("day");
+const NIGHT_LOOK = worldFor("night");
+const DAY_LOOK = worldFor("day");
 
 const FETCH_TIMEOUT_MS = 6000;
 const FALLBACK_KEY = "mcc:fallback";
@@ -80,22 +36,14 @@ function fetchBase(): Promise<StyleSpecification | null> {
   return baseStyle;
 }
 
-function roadColor(id: string, k: Look): string {
-  if (id.includes("casing")) return k.casing;
-  if (id.includes("motorway")) return k.motorway;
-  if (id.includes("major")) return k.major;
-  if (id.includes("railway")) return k.rail;
-  return k.minor;
-}
-
-function restyleLayer(layer: LayerSpecification, k: Look): LayerSpecification | null {
+function restyleLayer(layer: LayerSpecification, k: World): LayerSpecification | null {
   const l = JSON.parse(JSON.stringify(layer)) as any;
   const id: string = l.id;
   l.paint = l.paint ?? {};
   l.layout = l.layout ?? {};
   switch (l.type) {
     case "background":
-      l.paint = { "background-color": k.background };
+      l.paint = { "background-color": k.land };
       return l;
     case "fill": {
       if (id === "building") {
@@ -108,10 +56,7 @@ function restyleLayer(layer: LayerSpecification, k: Look): LayerSpecification | 
           minzoom: 12.5,
           metadata: { group: "buildings" },
           paint: {
-            "fill-extrusion-color": [
-              "interpolate", ["linear"], ["coalesce", ["get", "render_height"], ["get", "height"], 6],
-              0, k.buildingLow, 60, k.buildingHigh,
-            ],
+            "fill-extrusion-color": buildingColorExpr(k),
             "fill-extrusion-height": ["coalesce", ["get", "render_height"], ["get", "height"], 6],
             "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
             "fill-extrusion-opacity": k.buildingOpacity,
@@ -126,7 +71,9 @@ function restyleLayer(layer: LayerSpecification, k: Look): LayerSpecification | 
             ? k.wood
             : id.includes("residential")
               ? k.residential
-              : k.minor;
+              : id.includes("aeroway")
+                ? k.industrial
+                : k.casing; // piers
       l.paint = { "fill-color": color, "fill-opacity": 1 };
       return l;
     }
@@ -134,11 +81,12 @@ function restyleLayer(layer: LayerSpecification, k: Look): LayerSpecification | 
       if (l["source-layer"] === "waterway") {
         l.paint["line-color"] = k.waterway;
       } else if (l["source-layer"] === "boundary") {
-        l.paint["line-color"] = k.boundary;
+        l.paint["line-color"] = k.rail;
         l.paint["line-opacity"] = 0.5;
       } else {
         if (l["source-layer"] === "transportation") l.metadata = { ...(l.metadata ?? {}), group: "streets" };
-        l.paint["line-color"] = roadColor(id, k);
+        // Casings outline the roads; the inner lines take their color from the road class.
+        l.paint["line-color"] = id.includes("casing") ? k.casing : l["source-layer"] === "aeroway" ? k.minor : roadColorExpr(k);
         if (l.paint["line-opacity"] === undefined) l.paint["line-opacity"] = 0.95;
       }
       return l;
@@ -146,10 +94,10 @@ function restyleLayer(layer: LayerSpecification, k: Look): LayerSpecification | 
     case "symbol": {
       // Shields and airport icons are noise at night.
       if (id.includes("shield") || id === "airport") return null;
-      l.paint["text-color"] = k.text;
-      l.paint["text-halo-color"] = k.textHalo;
+      l.paint["text-color"] = k.label;
+      l.paint["text-halo-color"] = k.labelHalo;
       l.paint["text-halo-width"] = 1.2;
-      l.paint["text-opacity"] = k.textOpacity;
+      l.paint["text-opacity"] = k.labelOpacity;
       return l;
     }
     default:
@@ -157,12 +105,12 @@ function restyleLayer(layer: LayerSpecification, k: Look): LayerSpecification | 
   }
 }
 
-function fallback(k: Look): StyleSpecification {
+function fallback(k: World): StyleSpecification {
   return {
     version: 8,
     metadata: { [FALLBACK_KEY]: true },
     sources: {},
-    layers: [{ id: "background", type: "background", paint: { "background-color": k.background } }],
+    layers: [{ id: "background", type: "background", paint: { "background-color": k.land } }],
   };
 }
 
@@ -177,6 +125,10 @@ export async function buildMapStyle(dayMode: boolean): Promise<StyleSpecificatio
   const base = await fetchBase();
   if (!base) return fallback(k);
   const layers = base.layers.map((l) => restyleLayer(l, k)).filter(Boolean) as LayerSpecification[];
+  // Add the land use positron leaves out, right above its residential fill.
+  const source = (base.layers.find((l) => (l as { source?: string }).source) as { source?: string } | undefined)?.source ?? "openmaptiles";
+  const resIdx = layers.findIndex((l) => l.id === "landuse_residential");
+  layers.splice(resIdx < 0 ? 1 : resIdx + 1, 0, ...landLayers(source, k));
   // Buildings are drawn after roads so they rise above them.
   const bIdx = layers.findIndex((l) => l.id === "building-3d");
   if (bIdx >= 0) {
@@ -187,4 +139,4 @@ export async function buildMapStyle(dayMode: boolean): Promise<StyleSpecificatio
   return { ...base, layers };
 }
 
-export const MAP_BACKGROUND = { night: NIGHT_LOOK.background, day: DAY_LOOK.background };
+export const MAP_BACKGROUND = { night: NIGHT_LOOK.land, day: DAY_LOOK.land };

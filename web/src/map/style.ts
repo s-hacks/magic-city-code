@@ -1,5 +1,6 @@
 import type { Map as MLMap, StyleSpecification, LayerSpecification, ExpressionSpecification, GeoJSONSourceSpecification } from 'maplibre-gl';
 import { themes, type ThemeName } from '../theme';
+import { buildingColorExpr, landLayers, roadColorExpr, worldFor } from './worldColors';
 
 // Layer groups drive the layer toggles: every layer carries metadata.group.
 export type LayerGroup = 'streets' | 'buildings' | 'residents' | 'stores' | 'sites' | 'shelters' | 'hubs';
@@ -11,6 +12,7 @@ const zoomed = (lo: number, hi: number): ExpressionSpecification => ['interpolat
 
 export function makeStyle(name: ThemeName): StyleSpecification {
   const t = themes[name];
+  const w = worldFor(name); // real-world base colors (water, parks, land use, roads, buildings)
   const g = (group: LayerGroup, layer: LayerSpecification): LayerSpecification => ({ ...layer, metadata: { group } });
 
   return {
@@ -19,7 +21,7 @@ export function makeStyle(name: ThemeName): StyleSpecification {
     sky: {
       'sky-color': t.sky,
       'horizon-color': t.horizon,
-      'fog-color': t.land,
+      'fog-color': w.land,
       'sky-horizon-blend': 0.6,
       'horizon-fog-blend': 0.7,
       'fog-ground-blend': 0.75,
@@ -37,33 +39,36 @@ export function makeStyle(name: ThemeName): StyleSpecification {
       rings: empty,
     },
     layers: [
-      { id: 'bg', type: 'background', paint: { 'background-color': t.land } },
-      { id: 'water', type: 'fill', source: 'omt', 'source-layer': 'water', paint: { 'fill-color': t.water } },
-      { id: 'park', type: 'fill', source: 'omt', 'source-layer': 'park', paint: { 'fill-color': t.park } },
-      { id: 'wood', type: 'fill', source: 'omt', 'source-layer': 'landcover', filter: ['==', ['get', 'class'], 'wood'], paint: { 'fill-color': t.park } },
+      { id: 'bg', type: 'background', paint: { 'background-color': w.land } },
+      { id: 'residential', type: 'fill', source: 'omt', 'source-layer': 'landuse', filter: ['in', ['get', 'class'], ['literal', ['residential', 'suburb', 'neighbourhood']]], paint: { 'fill-color': w.residential } },
+      ...landLayers('omt', w),
+      { id: 'wood', type: 'fill', source: 'omt', 'source-layer': 'landcover', filter: ['==', ['get', 'class'], 'wood'], paint: { 'fill-color': w.wood } },
+      { id: 'park', type: 'fill', source: 'omt', 'source-layer': 'park', paint: { 'fill-color': w.park } },
+      { id: 'water', type: 'fill', source: 'omt', 'source-layer': 'water', paint: { 'fill-color': w.water } },
+      { id: 'waterway', type: 'line', source: 'omt', 'source-layer': 'waterway', paint: { 'line-color': w.waterway, 'line-width': zoomed(0.5, 4) } },
 
       g('streets', { id: 'road-minor', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 12,
         filter: ['in', ['get', 'class'], ['literal', ['minor', 'service', 'tertiary']]],
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': t.road, 'line-width': zoomed(0.3, 5) } }),
+        paint: { 'line-color': roadColorExpr(w), 'line-width': zoomed(0.3, 5) } }),
       g('streets', { id: 'road-major', type: 'line', source: 'omt', 'source-layer': 'transportation',
         filter: ['in', ['get', 'class'], ['literal', ['primary', 'secondary', 'trunk']]],
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': t.roadMajor, 'line-width': zoomed(0.6, 9) } }),
+        paint: { 'line-color': roadColorExpr(w), 'line-width': zoomed(0.6, 9) } }),
       g('streets', { id: 'road-motorway', type: 'line', source: 'omt', 'source-layer': 'transportation',
         filter: ['==', ['get', 'class'], 'motorway'],
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': t.violet, 'line-opacity': 0.55, 'line-width': zoomed(1, 12) } }),
+        paint: { 'line-color': w.motorway, 'line-opacity': 0.9, 'line-width': zoomed(1, 12) } }),
       g('streets', { id: 'rail', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 12,
         filter: ['==', ['get', 'class'], 'rail'],
-        paint: { 'line-color': t.road, 'line-width': 1, 'line-dasharray': [3, 3] } }),
+        paint: { 'line-color': w.rail, 'line-width': 1, 'line-dasharray': [3, 3] } }),
 
       g('buildings', { id: 'buildings', type: 'fill-extrusion', source: 'omt', 'source-layer': 'building', minzoom: 13,
         paint: {
-          'fill-extrusion-color': ['interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 6], 0, t.buildingLow, 60, t.buildingHigh],
+          'fill-extrusion-color': buildingColorExpr(w),
           'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 6],
           'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
-          'fill-extrusion-opacity': 0.92,
+          'fill-extrusion-opacity': w.buildingOpacity,
           'fill-extrusion-vertical-gradient': true,
         } }),
 
