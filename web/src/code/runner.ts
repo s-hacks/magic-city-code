@@ -11,6 +11,7 @@ import type { RunPayload } from "./core";
 import type { FromWorker, ToWorker } from "./protocol";
 
 export const RUN_TIMEOUT_MS = 5000;
+export const CRASH_MESSAGE = "Python had a problem and restarted. Press Run again.";
 export const TIMEOUT_MESSAGE = "Your code ran for more than 5 seconds. Is there a loop that never ends?";
 
 export type RunOutcome =
@@ -45,6 +46,7 @@ export interface WorkerLike {
   terminate(): void;
   onmessage: ((e: { data: FromWorker }) => void) | null;
   onerror: ((e: unknown) => void) | null;
+  onmessageerror?: ((e: unknown) => void) | null;
 }
 
 export interface RunnerOptions {
@@ -73,6 +75,7 @@ export function createPythonRunner(options: RunnerOptions = {}): PythonRunner {
   let runId = 0;
   let busy = false;
   let current: ((m: FromWorker) => void) | null = null; // handler for the run in flight
+  let onCrash: (() => void) | null = null; // ends the run in flight if the worker dies
 
   // `ready` is for the first load only.
   let resolveFirst!: () => void;
@@ -86,6 +89,7 @@ export function createPythonRunner(options: RunnerOptions = {}): PythonRunner {
   function startWorker() {
     const w = makeWorker();
     worker = w;
+    let loaded = false;
     setStatus({ state: "loading", message: "Waking up Python..." });
     workerReady = new Promise<void>((resolve, reject) => {
       w.onmessage = (e) => {
@@ -93,6 +97,7 @@ export function createPythonRunner(options: RunnerOptions = {}): PythonRunner {
         const m = e.data;
         if (m.type === "loading") setStatus({ state: "loading", message: m.message, progress: m.progress });
         else if (m.type === "ready") {
+          loaded = true;
           setStatus({ state: "ready" });
           resolve();
           resolveFirst();
@@ -102,16 +107,23 @@ export function createPythonRunner(options: RunnerOptions = {}): PythonRunner {
           rejectFirst(new Error(m.message));
         } else current?.(m);
       };
-      w.onerror = (ev) => {
+      // A crashed worker is thrown away and replaced, so the next Run works.
+      const crash = (ev: unknown) => {
         if (w !== worker) return;
         const message = (ev as { message?: string } | null)?.message || "The Python worker crashed.";
-        if (current) current({ type: "error", runId, friendly: "The code sandbox crashed. Try pressing Run again.", raw: message });
-        else {
+        w.terminate();
+        if (!loaded) {
+          // Died while starting up: report it instead of looping on restarts.
           setStatus({ state: "error", message });
           reject(new Error(message));
           rejectFirst(new Error(message));
+          return;
         }
+        if (!disposed) startWorker();
+        onCrash?.();
       };
+      w.onerror = crash;
+      w.onmessageerror = crash;
     });
     workerReady.catch(() => {});
   }
@@ -147,6 +159,7 @@ export function createPythonRunner(options: RunnerOptions = {}): PythonRunner {
           finished = true;
           clearTimeout(timer);
           current = null;
+          onCrash = null;
           busy = false;
           if (outcome.ok || !("timedOut" in outcome && outcome.timedOut)) {
             if (status.state === "running") setStatus({ state: "ready" });
@@ -160,6 +173,8 @@ export function createPythonRunner(options: RunnerOptions = {}): PythonRunner {
           if (!disposed) startWorker();
           finish({ ok: false, friendly: TIMEOUT_MESSAGE, raw: "TimeoutError: run took more than " + timeoutMs + " ms", stdout, timedOut: true });
         }, timeoutMs);
+
+        onCrash = () => finish({ ok: false, friendly: CRASH_MESSAGE, raw: "WorkerCrash", stdout });
 
         current = (m) => {
           if (m.type === "stdout" && m.runId === id) {

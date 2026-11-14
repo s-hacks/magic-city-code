@@ -133,4 +133,29 @@ describe("Pyodide + city.py", () => {
     const r = run(`city.place_hub(city.sites()[0])\nexit()\ncity.place_hub(city.sites()[1])`);
     expect(r.ok && r.actions).toHaveLength(1);
   });
+
+  it("resets everything a student changed, so later runs are clean", () => {
+    // Overwrite the city module's functions and attributes.
+    run(`city.sites = city.sites(kind="church")\ncity.place_hub = 5`);
+    let r = run(`city.place_hub(city.sites()[0])`);
+    expect(r.ok && r.actions).toHaveLength(1);
+
+    // Override builtins, sys.modules, sys.stdout and the recursion limit.
+    run(`import builtins, sys\nbuiltins.print = 5\nbuiltins.len = None\nsys.modules["json"] = None\nsys.modules["city"] = None\nsys.stdout = None\nsys.setrecursionlimit(30)`);
+    r = run(`print("still works", len(city.sites()))\nimport city\ncity.place_hub(city.sites()[1])`);
+    expect(r.ok && r.actions.map((a) => a.siteId)).toEqual(["site_2"]);
+    expect(out).toBe("still works 7\n");
+
+    // A student's own `print = 5` (just their globals) never leaks either, and re-imports are fine.
+    run(`print = 5\nimport random`);
+    r = run(`import random\nprint(random.randint(1, 1))`);
+    expect(r.ok).toBe(true);
+    expect(out).toBe("1\n");
+
+    // Even a run that fails halfway leaves things clean.
+    run(`import builtins\nbuiltins.sorted = 0\nraise ValueError("x")`);
+    r = run(`print(sorted([2, 1]))`);
+    expect(r.ok).toBe(true);
+    expect(out).toBe("[1, 2]\n");
+  });
 });

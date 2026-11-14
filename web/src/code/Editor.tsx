@@ -4,7 +4,7 @@
 //
 // highlightLine: gold glow on that line (the line that is placing a hub during the run animation).
 // errorLine: red wavy underline on that line (where the Python error is).
-// Ctrl/Cmd+Enter calls onRun.
+// Ctrl+Enter or Cmd+Enter calls onRun.
 //
 // Syntax colours come from parsing the code with the Python grammar and decorating the tokens
 // ourselves, so we don't need extra CodeMirror packages.
@@ -211,15 +211,14 @@ export function Editor({ value, onChange, highlightLine = null, errorLine = null
   cbs.current = { onChange, onRun };
 
   useEffect(() => {
+    // Mod is Cmd on macOS, so bind Ctrl-Enter too: it must work on every keyboard.
+    const runCommand = () => {
+      cbs.current.onRun?.();
+      return true;
+    };
     const runKeys = keymap.of([
-      {
-        key: "Mod-Enter",
-        preventDefault: true,
-        run: () => {
-          cbs.current.onRun?.();
-          return true;
-        },
-      },
+      { key: "Ctrl-Enter", preventDefault: true, run: runCommand },
+      { key: "Mod-Enter", preventDefault: true, run: runCommand },
     ]);
     const state = EditorState.create({
       doc: value,

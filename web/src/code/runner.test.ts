@@ -1,6 +1,6 @@
 // Tests the runner's 5-second rule and one-run-at-a-time rule using a fake worker.
 import { describe, expect, it } from "vitest";
-import { createPythonRunner, TIMEOUT_MESSAGE, type WorkerLike } from "./runner";
+import { createPythonRunner, CRASH_MESSAGE, TIMEOUT_MESSAGE, type WorkerLike } from "./runner";
 import type { FromWorker, ToWorker } from "./protocol";
 
 const payload = { sites: [], stores: [], neighborhoods: [] };
@@ -13,6 +13,7 @@ function fakeWorkers(behavior: (m: ToWorker, reply: (r: FromWorker) => void) => 
       terminated: false,
       onmessage: null,
       onerror: null,
+      onmessageerror: null,
       postMessage(m) {
         if (w.terminated) return;
         behavior(m, (r) => w.onmessage?.({ data: r }));
@@ -101,5 +102,37 @@ describe("createPythonRunner", () => {
     runner.onStatus((s) => seen.push(s.state));
     await runner.run("x", payload);
     expect(seen).toEqual(["loading", "ready", "running", "ready"]);
+  });
+
+  it("restarts a worker that errors during a run", async () => {
+    let call = 0;
+    const { made, createWorker } = fakeWorkers((m, reply) => {
+      call++;
+      if (call === 1) made[0].onerror?.({ message: "boom" });
+      else reply({ type: "done", runId: m.runId, actions: [] });
+    });
+    const runner = createPythonRunner({ createWorker, timeoutMs: 2000 });
+    await runner.ready;
+    const started = Date.now();
+    const out = await runner.run("x", payload);
+    expect(Date.now() - started).toBeLessThan(500); // not the 5 s endless-loop wait
+    expect(out).toMatchObject({ ok: false, friendly: CRASH_MESSAGE });
+    expect(made).toHaveLength(2);
+    expect(made[0].terminated).toBe(true);
+    expect((await runner.run("y", payload)).ok).toBe(true);
+  });
+
+  it("restarts a worker on messageerror too", async () => {
+    let call = 0;
+    const { made, createWorker } = fakeWorkers((m, reply) => {
+      call++;
+      if (call === 1) made[0].onmessageerror?.({});
+      else reply({ type: "done", runId: m.runId, actions: [] });
+    });
+    const runner = createPythonRunner({ createWorker, timeoutMs: 2000 });
+    const out = await runner.run("x", payload);
+    expect(out).toMatchObject({ ok: false, friendly: CRASH_MESSAGE });
+    expect(made).toHaveLength(2);
+    expect((await runner.run("y", payload)).ok).toBe(true);
   });
 });
