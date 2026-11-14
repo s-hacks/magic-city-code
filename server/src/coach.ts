@@ -6,7 +6,7 @@ import type { CoachRequest } from "@mcc/shared";
 import { describeError, FALLBACK_BETA, getClaude } from "./claude";
 import { COACH_MODEL } from "./config";
 import { COACH_RULES, coachUserMessage, levelContext, type CoachLevel, type CoachMission } from "./prompts/coach";
-import { scrub } from "./scrub";
+import { scrub, scrubCode } from "./scrub";
 
 /** If no text arrives from Claude within this time, the stored hint is sent instead. */
 export const FIRST_TOKEN_DEADLINE_MS = 8000;
@@ -131,7 +131,7 @@ export async function runCoach(
             content: coachUserMessage({
               step,
               // Students sometimes type their name or address; scrub before it reaches the model.
-              code: scrub(req.code ?? ""),
+              code: scrubCode(req.code ?? ""),
               lastError: req.lastError,
               lastCoverage: req.lastCoverage,
               question: req.question ? scrub(req.question) : undefined,

@@ -7,7 +7,7 @@ import { runCoach } from "./coach";
 import type { CoachMission } from "./prompts/coach";
 import { aiEnabled } from "./config";
 import { generateMission, MAX_PROBLEM_CHARS } from "./generator";
-import { scrub } from "./scrub";
+import { scrub, scrubCode } from "./scrub";
 import { newId, type Store } from "./store";
 
 const ProblemBody = z.object({
@@ -175,7 +175,7 @@ export function createApp(store: Store) {
       // First name or nickname only.
       studentName: body.data.studentName.split(/\s+/)[0].slice(0, 20),
       summary: scrub(body.data.summary),
-      code: scrub(body.data.code),
+      code: scrubCode(body.data.code),
       id: newId("proposal"),
       createdAt: new Date().toISOString(),
     };

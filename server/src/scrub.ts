@@ -65,7 +65,17 @@ export interface ScrubOptions {
   keepWords?: string[];
 }
 
+/** Scrub resident or student words: personal details removed, extra spaces squeezed out. */
 export function scrub(text: string, options: ScrubOptions = {}): string {
+  return removeDetails(text, options).replace(/[ \t]{2,}/g, " ").trim();
+}
+
+/** Scrub Python code: same removals, but spacing is kept exactly, because indentation is meaning. */
+export function scrubCode(code: string, options: ScrubOptions = {}): string {
+  return removeDetails(code, options);
+}
+
+function removeDetails(text: string, options: ScrubOptions): string {
   const keep = new Set([...DEFAULT_KEEP, ...(options.keepWords ?? []).flatMap((w) => w.split(/\s+/))]);
   let out = text;
   out = out.replace(EMAIL, "[email]");
@@ -77,5 +87,5 @@ export function scrub(text: string, options: ScrubOptions = {}): string {
     return match.slice(0, match.length - name.length) + "[name]";
   });
   out = out.replace(TITLE_NAME, "[name]");
-  return out.replace(/[ \t]{2,}/g, " ").trim();
+  return out;
 }

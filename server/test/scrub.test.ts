@@ -1,6 +1,6 @@
 // Checks that names, phone numbers and addresses are removed from resident text.
 import { describe, expect, it } from "vitest";
-import { scrub } from "../src/scrub";
+import { scrub, scrubCode } from "../src/scrub";
 
 describe("scrub", () => {
   it("removes names after my name is / I'm / this is", () => {
@@ -38,5 +38,12 @@ describe("scrub", () => {
   it("handles several details at once", () => {
     const out = scrub("My name is Ann Lee, I live at 10 Pine Road, call 2055551234 or ann@x.org");
     expect(out).not.toMatch(/Ann|Lee|Pine|2055551234|ann@x\.org/);
+  });
+});
+
+describe("scrubCode", () => {
+  it("keeps Python indentation exactly while removing personal details", () => {
+    const code = 'for place in best:\n    if len(chosen) == 5:\n        break\n    print("call 205-555-1234")\n';
+    expect(scrubCode(code)).toBe('for place in best:\n    if len(chosen) == 5:\n        break\n    print("call [phone]")\n');
   });
 });

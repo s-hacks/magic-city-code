@@ -55,7 +55,7 @@ export const MissionPanel = ({ mission, levelIndex, unlocked, onLevel, busy, bas
         <h3>{level.title}</h3>
         <p className="goal-line">Goal: light up {pct(level.goal.target)} <span className="muted small">· counting {needWords(mission).who} within a {mission.walkMinutes}-minute walk (estimate)</span></p>
         {needsHonestyNote(mission) && (
-          <p className="note-box">Honest note: there is no public data on where people sleeping outside are, so this counts low-income households instead. A starting point, not the whole picture.</p>
+          <p className="note-box">Honest note: no public data shows where people sleep outside, so this counts low-income households instead.</p>
         )}
         <p className="instructions">{renderTicks(level.instructions)}</p>
         <details className="story">
