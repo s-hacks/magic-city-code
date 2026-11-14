@@ -11,8 +11,9 @@ export type ToWorker = {
 };
 
 export type FromWorker =
-  | { type: "loading"; message: string } // Pyodide download progress
+  | { type: "loading"; message: string; progress?: number } // Pyodide start-up stage; progress 0..1 (additive)
   | { type: "ready" }
+  | { type: "load_error"; message: string } // Pyodide could not start, e.g. files missing (additive)
   | { type: "stdout"; runId: number; text: string }
   | { type: "done"; runId: number; actions: Action[] }
   | { type: "error"; runId: number; friendly: string; line?: number; raw: string };
