@@ -20,11 +20,16 @@ export function bboxRadiusMeters(b: Bbox): number {
   return Math.hypot(dx, dy) / 2;
 }
 
-/** Start high above the city, flat, then glide down to a pitched 3D view. */
-export function flyIn(map: MlMap) {
+/** Start high above the city, flat, then glide down to a pitched 3D view.
+ *  `padding` keeps the city clear of screen overlays (the home hero sits on the left);
+ *  it is applied as a one-off offset so later mission framing is not affected. */
+export function flyIn(map: MlMap, padding?: PaddingOptions) {
+  const offset: [number, number] = padding ? [(padding.left - padding.right) / 2, (padding.top - padding.bottom) / 2] : [0, 0];
   map.stop();
   map.jumpTo({ center: [BHAM_CENTER[0] + 0.02, BHAM_CENTER[1] - 0.04], zoom: 9.3, pitch: 0, bearing: 0 });
-  map.flyTo({ center: [BHAM_CENTER[0], BHAM_CENTER[1] - 0.005], zoom: 12.3, pitch: 52, bearing: -18, duration: 5000, curve: 1.25, essential: true });
+  // With an overlay on one side there is less room, so pull back to keep every flare in view.
+  const zoom = padding && Math.abs(offset[0]) > 100 ? 11.7 : 12.3;
+  map.flyTo({ center: [BHAM_CENTER[0] - (padding ? 0.01 : 0), BHAM_CENTER[1] - 0.005], zoom, pitch: 52, bearing: -18, offset, duration: 5000, curve: 1.25, essential: true });
 }
 
 function fit(map: MlMap, bbox: Bbox, padding: PaddingOptions) {

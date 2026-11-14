@@ -47,7 +47,8 @@ function build(name: ThemeName): Palette {
   const site = rgba(t.muted);
   return {
     residentFar: rgba(t.ash, night ? 150 : 200),
-    residentMid: mix(t.ash, t.accent, 0.45, night ? 185 : 220),
+    // Only lit residents are molten; a longer walk is still mostly ash, faintly warm.
+    residentMid: mix(t.ash, t.accent, 0.2, night ? 160 : 210),
     residentNear: rgba(t.accent, night ? 245 : 255),
     store: rgba(t.store),
     storeLine: rgba(t.store, night ? 150 : 200),
@@ -57,7 +58,7 @@ function build(name: ThemeName): Palette {
     beamHalo: rgba(t.accent, night ? 60 : 70),
     ring: rgba(t.accent, 230),
     haze: rgba(night ? t.horizon : t.accent).slice(0, 3) as [number, number, number],
-    hazeMaxAlpha: night ? 150 : 45,
+    hazeMaxAlpha: night ? 70 : 35,
     flare: rgba(t.accent),
     label: rgba(t.text),
     labelOutline: rgba(t.bg, 235),
