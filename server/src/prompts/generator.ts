@@ -28,6 +28,7 @@ Examples that do NOT fit (set supported=false): a wrong water bill, potholes, br
   - households_poverty: households below the poverty line (warming stations, help for people in need). There is no public data on where unsheltered people are, so if you use this for homelessness or cold nights, the story must say honestly that the mission counts low-income households instead.
   - households_no_internet: households with no internet subscription (homework, Wi-Fi, getting online)
 - walkMinutes: usually 10.
+- existingSources: "stores" when the thing placed is a food source (pickup hubs, farm stands, shuttle stops to the store), so the existing grocery stores already count as places people can reach. "none" when the thing is not food (Wi-Fi study spots, warming stations, after-school spots), so only the placed things count.
 - levels: exactly three levels, numbered 1, 2 and 4:
   - Level 1, concept "Calling a function": place ONE thing. maxPlacements 1. goalTarget about 0.1.
   - Level 2, concept "Loops": use a for loop to place five. maxPlacements 5. goalTarget about 0.3.

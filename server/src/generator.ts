@@ -2,10 +2,14 @@
 // Path: scrub personal details -> ask Claude for a mission draft (structured output) -> build and
 // check the full mission -> if checks fail, ask once more with the errors -> if that fails too,
 // use the closest seed mission (or a built-in template). With no key, the keyword sorter decides.
+// Every AI-made, re-targeted or template mission is then calibrated: its answer code is run in
+// real Python and scored with the real engine, and each level's goal is set from that score.
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import type { GenerateRequest, GenerateResponse, Mission, Neighborhood, ProblemCard } from "@mcc/shared";
-import { loadCity, neighborhoodList, siteCounts, type CityData } from "./city";
+import type { GenerateRequest, GenerateResponse, Mission, Neighborhood, ProblemCard, SiteKind } from "@mcc/shared";
+import { calibrateMission } from "./calibrate/calibrate";
+import { getSandbox, type PythonSandbox } from "./calibrate/sandbox";
+import { engineData, loadCity, neighborhoodList, siteCounts, sitesIn, type CityData } from "./city";
 import { classifyProblem, detectNeighborhood, type Classification } from "./classify";
 import { describeError, FALLBACK_BETA, getClaude } from "./claude";
 import { GENERATOR_MODEL } from "./config";
@@ -30,6 +34,22 @@ export interface GenerateDeps {
   city?: CityData;
   /** Pass null to force the offline path. Defaults to the shared client (null without a key). */
   claude?: Anthropic | null;
+  /** Python sandbox for calibration. Pass null to skip calibration. Defaults to the shared one. */
+  sandbox?: PythonSandbox | null;
+}
+
+type Checked = { ok: true; mission: Mission } | { ok: false; errors: string[] };
+
+/** Validate, then (unless skipped) calibrate goal targets from real Python + engine runs. */
+async function checkMission(mission: Mission, city: CityData, sandbox: PythonSandbox | null, notes: string[]): Promise<Checked> {
+  const checked = validateMission(mission, city);
+  if (!checked.ok) return checked;
+  if (!sandbox) return checked;
+  const cal = await calibrateMission(checked.mission, engineData(city), sandbox);
+  if (!cal.ok) return { ok: false, errors: cal.errors };
+  if ("skipped" in cal) notes.push(`calibration skipped: ${cal.skipped}`);
+  else notes.push(`calibrated in ${cal.ms} ms: targets ${cal.levels.map((l) => l.target).join(", ")}`);
+  return { ok: true, mission: cal.mission };
 }
 
 export async function generateMission(req: GenerateRequest, deps: GenerateDeps): Promise<GenerateOutcome> {
@@ -40,12 +60,13 @@ export async function generateMission(req: GenerateRequest, deps: GenerateDeps):
   const required = req.neighborhood ? (hoods.find((n) => n.id === req.neighborhood) ?? null) : null;
   const mentioned = detectNeighborhood(rawText, hoods);
   const claude = deps.claude === undefined ? getClaude() : deps.claude;
+  const sandbox = deps.sandbox === undefined ? getSandbox() : deps.sandbox;
   const notes: string[] = [];
   if (req.neighborhood && !required) notes.push(`requested neighborhood "${req.neighborhood}" is unknown; ignored`);
 
   let attempts = 0;
   if (claude) {
-    const ai = await generateWithClaude(claude, { text, required, hoods, city });
+    const ai = await generateWithClaude(claude, { text, required, hoods, city, sandbox });
     attempts = ai.attempts;
     notes.push(...ai.notes);
     if (ai.kind === "mission") {
@@ -63,7 +84,7 @@ export async function generateMission(req: GenerateRequest, deps: GenerateDeps):
   if (!classification.supported) {
     return unsupported(deps.store, { reason: classification.reason, text, hood: required ?? mentioned, usedAI: false, attempts, notes });
   }
-  const mission = fallbackMission({ classification, text, target: required ?? mentioned, city, store: deps.store, notes });
+  const mission = await fallbackMission({ classification, text, target: required ?? mentioned, city, store: deps.store, notes, sandbox });
   return finish(deps.store, { mission, text, source: "fallback", usedAI: false, attempts, notes });
 }
 
@@ -77,7 +98,7 @@ type AiResult =
 
 async function generateWithClaude(
   claude: Anthropic,
-  ctx: { text: string; required: Neighborhood | null; hoods: Neighborhood[]; city: CityData },
+  ctx: { text: string; required: Neighborhood | null; hoods: Neighborhood[]; city: CityData; sandbox: PythonSandbox | null },
 ): Promise<AiResult> {
   const schema = buildDraftSchema(ctx.hoods.map((n) => n.id));
   // The helper turns the Zod schema into the JSON schema structured outputs expects.
@@ -166,7 +187,7 @@ async function generateWithClaude(
       continue;
     }
     const mission = assembleMission(draft.data, { id: newId("mission"), neighborhood: hood, residentText: ctx.text });
-    const checked = validateMission(mission, ctx.city);
+    const checked = await checkMission(mission, ctx.city, ctx.sandbox, notes);
     if (checked.ok) return { kind: "mission", mission: checked.mission, attempts: attempt, notes };
     previousErrors = checked.errors;
     notes.push(`attempt ${attempt}: failed checks: ${checked.errors.slice(0, 3).join("; ")}`);
@@ -177,58 +198,61 @@ async function generateWithClaude(
 // ---------------------------------------------------------------------------------------------
 // Offline path: closest seed mission, re-pointed at the resident's neighborhood, or a template.
 
-export function fallbackMission(opts: {
+export async function fallbackMission(opts: {
   classification: Extract<Classification, { supported: true }>;
   text: string;
   target: Neighborhood | null;
   city: CityData;
   store: Store;
   notes: string[];
-}): Mission {
-  const { classification, text, target, city, store, notes } = opts;
+  sandbox: PythonSandbox | null;
+}): Promise<Mission> {
+  const { classification, text, target, city, store, notes, sandbox } = opts;
   const spec = themeSpec(classification.theme);
   const hoods = neighborhoodList(city);
   const id = newId("mission");
+  const hoodOf = (m: Mission) => hoods.find((n) => n.id === m.area.neighborhood) ?? null;
 
   // Closest seed: the theme's own seed first (e.g. feed-the-block), then same need group,
   // then same neighborhood, then the same "thing".
-  const seeds = store
-    .seedMissions()
-    .filter((m) => m.id === spec.seedId || m.needColumn === spec.needColumn)
-    .sort((a, b) => seedScore(b, spec, target) - seedScore(a, spec, target));
+  const seed =
+    store
+      .seedMissions()
+      .filter((m) => m.id === spec.seedId || m.needColumn === spec.needColumn)
+      .sort((a, b) => seedScore(b, spec, target) - seedScore(a, spec, target))[0] ?? null;
+  const seedHood = seed ? hoodOf(seed) : null;
 
-  for (const seed of seeds) {
-    const seedHood = hoods.find((n) => n.id === seed.area.neighborhood) ?? null;
-    const tries: Neighborhood[] = [];
-    if (target) tries.push(target);
-    if (seedHood && seedHood.id !== target?.id) tries.push(seedHood);
-    for (const hood of tries) {
-      const candidate = retarget(seed, { id, hood, fromName: seedHood?.name, text });
-      const checked = validateMission(candidate, city);
-      if (checked.ok) {
-        notes.push(`fallback: seed mission "${seed.id}" in ${hood.name}`);
-        return checked.mission;
-      }
-    }
-  }
-
-  // No seed fits: build from the template, in the target neighborhood, then the theme's usual
-  // neighborhood, then the first one whose data passes the checks.
-  const preferred = [target, hoods.find((n) => n.id === spec.defaultNeighborhood) ?? null].filter(
-    (n): n is Neighborhood => n !== null,
-  );
-  const order = [...preferred, ...hoods.filter((n) => !preferred.some((p) => p.id === n.id))];
-  const build = (hood: Neighborhood) =>
+  const template = (hood: Neighborhood) =>
     buildTemplateMission({ theme: classification.theme, neighborhood: hood, residentText: text, id, siteCounts: siteCounts(city, hood.bbox) });
-  for (const hood of order) {
-    const m = build(hood);
-    if (validateMission(m, city).ok) {
-      notes.push(`fallback: built-in "${spec.title}" template in ${hood.name}`);
-      return m;
-    }
+
+  // Candidates in order. A seed in its own neighborhood is already calibrated by hand;
+  // a re-targeted seed or a template gets calibrated here.
+  type Candidate = { label: string; mission: Mission; calibrate: boolean };
+  const candidates: Candidate[] = [];
+  if (target && seed && seedHood?.id !== target.id) {
+    candidates.push({ label: `seed "${seed.id}" moved to ${target.name}`, mission: retarget(seed, { id, hood: target, fromName: seedHood?.name, text, city }), calibrate: true });
   }
-  notes.push(`fallback: template in ${order[0].name} (data checks did not pass anywhere)`);
-  return build(order[0]);
+  if (target && !(seed && seedHood?.id === target.id)) {
+    candidates.push({ label: `built-in "${spec.title}" template in ${target.name}`, mission: template(target), calibrate: true });
+  }
+  if (seed && seedHood) {
+    candidates.push({ label: `seed "${seed.id}" in ${seedHood.name}`, mission: retarget(seed, { id, hood: seedHood, text }), calibrate: false });
+  }
+  const preferred = hoods.find((n) => n.id === spec.defaultNeighborhood) ?? null;
+  const rest = [preferred, ...hoods].filter((n, i, all): n is Neighborhood => !!n && n.id !== target?.id && all.findIndex((x) => x?.id === n.id) === i);
+  for (const hood of rest) candidates.push({ label: `built-in "${spec.title}" template in ${hood.name}`, mission: template(hood), calibrate: true });
+
+  for (const c of candidates) {
+    const checked = await checkMission(c.mission, city, c.calibrate ? sandbox : null, notes);
+    if (checked.ok) {
+      notes.push(`fallback: ${c.label}`);
+      return checked.mission;
+    }
+    notes.push(`fallback skipped ${c.label}: ${checked.errors.slice(0, 2).join("; ")}`);
+  }
+  const last = candidates[0];
+  notes.push(`fallback: ${last.label} (no candidate passed every check)`);
+  return last.mission;
 }
 
 function seedScore(m: Mission, spec: ThemeSpec, target: Neighborhood | null): number {
@@ -240,8 +264,17 @@ function seedScore(m: Mission, spec: ThemeSpec, target: Neighborhood | null): nu
   return s;
 }
 
-function retarget(seed: Mission, o: { id: string; hood: Neighborhood; fromName?: string; text: string }): Mission {
-  const swap = (s: string) => (o.fromName && o.fromName !== o.hood.name ? s.split(o.fromName).join(o.hood.name) : s);
+function retarget(
+  seed: Mission,
+  o: { id: string; hood: Neighborhood; fromName?: string; text: string; city?: CityData },
+): Mission {
+  // Sites the seed names in quotes (e.g. city.place_hub("West End Branch Library")) don't exist
+  // in another neighborhood, so swap each for a site of the same kind in the new one.
+  const siteSwaps = o.city && o.fromName && o.fromName !== o.hood.name ? namedSiteSwaps(seed, o.hood, o.city) : [];
+  const swap = (s: string) => {
+    for (const [from, to] of siteSwaps) s = s.split(from).join(to);
+    return o.fromName && o.fromName !== o.hood.name ? s.split(o.fromName).join(o.hood.name) : s;
+  };
   return {
     ...seed,
     id: o.id,
@@ -249,10 +282,40 @@ function retarget(seed: Mission, o: { id: string; hood: Neighborhood; fromName?:
     story: swap(seed.story),
     residentQuote: o.text,
     area: { neighborhood: o.hood.id, bbox: o.hood.bbox },
-    levels: seed.levels.map((l) => ({ ...l, instructions: swap(l.instructions) })),
+    levels: seed.levels.map((l) => ({
+      ...l,
+      title: swap(l.title),
+      instructions: swap(l.instructions),
+      starterCode: swap(l.starterCode),
+      solution: swap(l.solution),
+      hints: l.hints.map(swap),
+    })),
     source: { kind: "resident", text: o.text },
     approved: false,
   };
+}
+
+/** Pairs [old site name, new site name] for every site the seed's code names in quotes. */
+function namedSiteSwaps(seed: Mission, hood: Neighborhood, city: CityData): [string, string][] {
+  const sites = city.sites ?? [];
+  const named = new Set<string>();
+  for (const l of seed.levels) {
+    for (const m of `${l.starterCode}\n${l.solution}`.matchAll(/["']([^"'\n]{3,80})["']/g)) named.add(m[1]);
+  }
+  const inNewHood = sitesIn(city, hood.bbox, seed.siteKinds as SiteKind[]) ?? [];
+  const used = new Set<string>();
+  const swaps: [string, string][] = [];
+  for (const name of named) {
+    const old = sites.find((s) => s.name.toLowerCase() === name.toLowerCase());
+    if (!old) continue; // a kind like "church", not a site name
+    const pick =
+      inNewHood.find((s) => s.kind === old.kind && !used.has(s.id)) ?? inNewHood.find((s) => !used.has(s.id));
+    if (!pick) continue;
+    used.add(pick.id);
+    swaps.push([name, pick.name]);
+  }
+  // Longest names first so "West End Branch Library" is replaced before "West End".
+  return swaps.sort((a, b) => b[0].length - a[0].length);
 }
 
 // ---------------------------------------------------------------------------------------------

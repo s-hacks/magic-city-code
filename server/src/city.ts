@@ -3,13 +3,14 @@
 // Files are re-read when they change on disk.
 import fs from "node:fs";
 import path from "node:path";
-import type { Area, Neighborhood, Site, SiteKind } from "@mcc/shared";
+import type { Area, CityData as EngineCityData, Neighborhood, Site, SiteKind, Store } from "@mcc/shared";
 import { DATA_DIR } from "./paths";
 
 export interface CityData {
   neighborhoods: Neighborhood[] | null; // null = file missing
   areas: Area[] | null;
   sites: Site[] | null;
+  stores?: Store[] | null;
 }
 
 const cache = new Map<string, { mtimeMs: number; value: unknown }>();
@@ -37,6 +38,7 @@ export function loadCity(dir: string = DATA_DIR): CityData {
     neighborhoods: arr<Neighborhood>("neighborhoods.json"),
     areas: arr<Area>("areas.json"),
     sites: arr<Site>("sites.json"),
+    stores: arr<Store>("stores.json"),
   };
 }
 
@@ -92,4 +94,10 @@ export function siteCounts(city: CityData, bbox: BBox): Partial<Record<SiteKind,
   const counts: Partial<Record<SiteKind, number>> = {};
   for (const s of city.sites) if (inBBox(s.lon, s.lat, bbox)) counts[s.kind] = (counts[s.kind] ?? 0) + 1;
   return counts;
+}
+
+/** The full data set the engine needs, or null if any file is still missing. */
+export function engineData(city: CityData): EngineCityData | null {
+  if (!city.areas || !city.sites || !city.neighborhoods || !city.stores) return null;
+  return { areas: city.areas, sites: city.sites, neighborhoods: city.neighborhoods, stores: city.stores };
 }

@@ -17,6 +17,8 @@ export interface ThemeSpec {
   who: string; // "families without a car"
   sortKey: "families_without_car" | "families_nearby";
   placements: number;
+  /** "none" when the placed thing is not a food source, so stores don't count as coverage. */
+  existingSources: "stores" | "none";
   story: (hood: string) => string;
 }
 
@@ -47,6 +49,7 @@ export const THEMES: Record<Theme, ThemeSpec> = {
     who: "families without a car",
     sortKey: "families_without_car",
     placements: 5,
+    existingSources: "stores",
     story: (h) =>
       `${h} has no grocery store close by, and many families don't have a car. Grocery pickup hubs at churches, schools and libraries could bring food within walking distance. Your code chooses where they go.`,
   },
@@ -62,6 +65,7 @@ export const THEMES: Record<Theme, ThemeSpec> = {
     who: "families without a car",
     sortKey: "families_without_car",
     placements: 4,
+    existingSources: "stores",
     story: (h) =>
       `A produce truck brings fresh fruit and vegetables to ${h} once a week, but it can only make four stops. Your code picks the stops so more families without a car can walk to fresh food.`,
   },
@@ -77,6 +81,7 @@ export const THEMES: Record<Theme, ThemeSpec> = {
     who: "families without a car",
     sortKey: "families_without_car",
     placements: 5,
+    existingSources: "stores",
     story: (h) =>
       `The bus no longer runs on Saturdays, so families in ${h} without a car can't get to the store on their day off. A shuttle van could make a few stops. Your code picks where the stops go.`,
   },
@@ -92,6 +97,7 @@ export const THEMES: Record<Theme, ThemeSpec> = {
     who: "families with no internet at home",
     sortKey: "families_nearby",
     placements: 5,
+    existingSources: "none",
     story: (h) =>
       `Some kids in ${h} can't get online at home to do homework. Free Wi-Fi study spots could help. Your code chooses where they go so more families without internet can walk to one.`,
   },
@@ -107,6 +113,7 @@ export const THEMES: Record<Theme, ThemeSpec> = {
     who: "kids",
     sortKey: "families_nearby",
     placements: 5,
+    existingSources: "none",
     story: (h) =>
       `Kids in ${h} need safe places to go after school. Your code picks where to open after-school spots so more kids can walk to one.`,
   },
@@ -122,6 +129,7 @@ export const THEMES: Record<Theme, ThemeSpec> = {
     who: "low-income households",
     sortKey: "families_nearby",
     placements: 5,
+    existingSources: "none",
     story: (h) =>
       `On cold nights, people in ${h} need a warm place nearby. There is no public data on where people without homes sleep, so this mission counts low-income households instead. Your code picks where to open warming stations.`,
   },
@@ -137,6 +145,7 @@ export const THEMES: Record<Theme, ThemeSpec> = {
     who: "seniors",
     sortKey: "families_nearby",
     placements: 5,
+    existingSources: "stores",
     story: (h) =>
       `Many older neighbors in ${h} have a hard time getting around. Help stops could bring groceries and medicine closer. Your code picks where they go.`,
   },
@@ -230,6 +239,7 @@ export function buildTemplateMission(opts: {
     siteKinds: spec.siteKinds,
     needColumn: spec.needColumn,
     walkMinutes: 10,
+    existingSources: spec.existingSources,
     levels: buildLevels(spec, codeKind),
     source: { kind: "resident", text: opts.residentText },
     approved: false,

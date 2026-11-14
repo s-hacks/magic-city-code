@@ -44,6 +44,9 @@ export function buildDraftSchema(neighborhoodIds: string[]) {
     siteKinds: z.array(z.enum(SITE_KINDS as [string, ...string[]])),
     needColumn: z.enum(NEED_COLUMNS as [string, ...string[]]),
     walkMinutes: z.number().int().describe("Walk limit in minutes, usually 10"),
+    existingSources: z
+      .enum(["stores", "none"])
+      .describe('"stores" if grocery stores already do the job of the thing placed (food missions); "none" otherwise'),
     levels: z.array(LevelDraft),
   });
 }
@@ -67,6 +70,7 @@ export function assembleMission(
     siteKinds: [...new Set(draft.siteKinds)] as Mission["siteKinds"],
     needColumn: draft.needColumn as Mission["needColumn"],
     walkMinutes: draft.walkMinutes,
+    existingSources: draft.existingSources,
     levels: draft.levels.map((l) => ({
       number: l.number,
       title: l.title,
