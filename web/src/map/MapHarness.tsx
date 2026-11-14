@@ -10,6 +10,8 @@ import { useCompare } from "./useCompare";
 import { loadCityData } from "./dataLoader";
 import { fakeDescribeSites, fakeSimulate, harnessMission, syntheticCity } from "./harnessData";
 
+const NO_LAYERS_HIDDEN: ReadonlySet<never> = new Set();
+
 interface EngineApi {
   simulate(m: Mission, a: Action[], d: CityData, level?: number): Result;
   baseline(m: Mission, d: CityData, level?: number): Result;
@@ -220,7 +222,7 @@ export function MapHarness() {
         </div>
         <div style={{ minHeight: 22, color: "#FFC44D" }}>{step || (hoverFlare ? `flare: ${hoverFlare}` : "")}</div>
       </div>
-      {mode === "mission" && <Legend walkMinutes={mission.walkMinutes} dayMode={dayMode} />}
+      {mode === "mission" && <Legend walkMinutes={mission.walkMinutes} hidden={NO_LAYERS_HIDDEN} onToggle={() => {}} />}
     </div>
   );
 }

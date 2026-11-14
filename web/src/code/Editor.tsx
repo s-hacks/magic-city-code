@@ -1,8 +1,8 @@
-// The code editor: CodeMirror 6, Python, big font for projectors, night-city colours.
+// The code editor: CodeMirror 6, Python, big font for projectors, theme-token colours.
 //
 //   <Editor value onChange highlightLine errorLine onRun />
 //
-// highlightLine: gold glow on that line (the line that is placing a hub during the run animation).
+// highlightLine: molten glow on that line (the line that is placing a hub during the run animation).
 // errorLine: red wavy underline on that line (where the Python error is).
 // Ctrl+Enter or Cmd+Enter calls onRun.
 //
@@ -33,67 +33,53 @@ export interface EditorProps {
 }
 
 // ---------------------------------------------------------------------------
-// Colours: deep navy night, gold accents
+// Colours (UI prototype look): CSS variables from src/theme.ts, so the editor follows
+// day/night. Mostly monochrome code; the accent marks city.* calls, numbers and strings.
 // ---------------------------------------------------------------------------
-const NAVY = "#0b1226";
-const NAVY_LIGHT = "#121b36";
-const GOLD = "#f5c542";
-const TEXT = "#e8ecf8";
+const tint = (pct: number) => `color-mix(in srgb, var(--accent) ${pct}%, transparent)`;
 
-const theme = EditorView.theme(
-  {
-    "&": {
-      color: TEXT,
-      backgroundColor: NAVY,
-      fontSize: "20px",
-      height: "100%",
-    },
-    ".cm-scroller": {
-      fontFamily: '"JetBrains Mono", "Fira Code", ui-monospace, Menlo, Consolas, monospace',
-      lineHeight: "1.6",
-    },
-    ".cm-content": { caretColor: GOLD, padding: "12px 0" },
-    ".cm-cursor, .cm-dropCursor": { borderLeftColor: GOLD, borderLeftWidth: "2px" },
-    "&.cm-focused": { outline: "none" },
-    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": {
-      backgroundColor: "rgba(245, 197, 66, 0.25)",
-    },
-    ".cm-gutters": {
-      backgroundColor: NAVY_LIGHT,
-      color: "#6b7aa6",
-      border: "none",
-      borderRight: "1px solid #1f2b52",
-    },
-    ".cm-lineNumbers .cm-gutterElement": { padding: "0 12px 0 14px", minWidth: "2.2em" },
-    ".cm-activeLine": { backgroundColor: "rgba(255, 255, 255, 0.04)" },
-    ".cm-activeLineGutter": { backgroundColor: "rgba(245, 197, 66, 0.08)", color: GOLD },
-
-    // The line that is placing a hub right now.
-    ".cm-run-line": {
-      backgroundColor: "rgba(245, 197, 66, 0.24)",
-      boxShadow: "inset 4px 0 0 #f5c542, 0 0 18px rgba(245, 197, 66, 0.45)",
-      transition: "background-color 120ms",
-    },
-    // The line with the error.
-    ".cm-error-line": {
-      backgroundColor: "rgba(255, 82, 82, 0.10)",
-      textDecoration: "underline wavy #ff5252",
-      textDecorationThickness: "1.5px",
-      textUnderlineOffset: "5px",
-    },
-
-    // Syntax colours.
-    ".tok-keyword": { color: "#ffb454", fontWeight: "600" },
-    ".tok-string": { color: "#9be28a" },
-    ".tok-number": { color: "#7fd1ff" },
-    ".tok-comment": { color: "#6b7aa6", fontStyle: "italic" },
-    ".tok-bool": { color: "#ff8fb1" },
-    ".tok-call": { color: "#ffe08a" },
-    ".tok-prop": { color: "#c3b5ff" },
-    ".tok-def": { color: "#ffe08a", fontWeight: "600" },
+const theme = EditorView.theme({
+  "&": {
+    color: "var(--text)",
+    backgroundColor: "transparent",
+    fontSize: "18px",
+    height: "100%",
   },
-  { dark: true },
-);
+  ".cm-scroller": { fontFamily: "var(--mono)", lineHeight: "1.65" },
+  ".cm-content": { caretColor: "var(--accent)", padding: "12px 0" },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--accent)", borderLeftWidth: "2px" },
+  "&.cm-focused": { outline: "none" },
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": {
+    backgroundColor: `${tint(22)} !important`,
+  },
+  ".cm-gutters": { backgroundColor: "transparent", color: "var(--ash)", border: "none" },
+  ".cm-lineNumbers .cm-gutterElement": { padding: "0 12px 0 18px", minWidth: "2.2em" },
+  ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "color-mix(in srgb, var(--text) 4%, transparent)" },
+
+  // The line that is placing a hub right now.
+  ".cm-run-line": {
+    backgroundColor: tint(16),
+    boxShadow: "inset 3px 0 0 var(--accent)",
+    transition: "background-color 120ms",
+  },
+  // The line with the error.
+  ".cm-error-line": {
+    textDecoration: "underline wavy var(--accent)",
+    textDecorationThickness: "1.5px",
+    textUnderlineOffset: "5px",
+    boxShadow: "inset 3px 0 0 var(--accent)",
+  },
+
+  // Syntax colours.
+  ".tok-keyword": { color: "var(--muted)", fontWeight: "600" },
+  ".tok-string": { color: "var(--accent)", opacity: "0.8" },
+  ".tok-number": { color: "var(--accent)", opacity: "0.8" },
+  ".tok-comment": { color: "var(--ash)", fontStyle: "italic" },
+  ".tok-bool": { color: "var(--accent)", opacity: "0.8" },
+  ".tok-call": { color: "var(--accent)" },
+  ".tok-prop": { color: "var(--text)" },
+  ".tok-def": { color: "var(--text)", fontWeight: "600" },
+});
 
 // ---------------------------------------------------------------------------
 // Syntax highlighting from the Python parse tree

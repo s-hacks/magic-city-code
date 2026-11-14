@@ -11,15 +11,19 @@ import { Legend } from "../map/Legend";
 import { useCompare } from "../map/useCompare";
 import { useDemoKeys } from "../code/demoKeys";
 import { baseline, describeSites, neighborhoodsSummary, simulate } from "../engine";
-import { TopBar } from "../app/TopBar";
+import { TopBar, isTyping } from "../app/TopBar";
+import { Lock } from "../app/icons";
+import type { LayerGroup } from "../map/layerGroups";
+import { themes } from "../theme";
 import { useApp } from "./AppContext";
 import { MissionPanel } from "./MissionPanel";
 import { CodePanel } from "./CodePanel";
+import { Coach } from "./Coach";
 import { getUnlocked, saveSnapshot, setUnlocked } from "./storage";
 import { pct } from "./text";
 
 /** Draw every canvas in the map (map + lights) onto one small picture. */
-function snapshotOf(handle: MapViewHandle | null): string | null {
+function snapshotOf(handle: MapViewHandle | null, background: string): string | null {
   try {
     const container = handle?.getMap()?.getContainer();
     const canvases = Array.from(container?.querySelectorAll("canvas") ?? []) as HTMLCanvasElement[];
@@ -31,7 +35,7 @@ function snapshotOf(handle: MapViewHandle | null): string | null {
     out.width = Math.round(w * scale);
     out.height = Math.round(h * scale);
     const ctx = out.getContext("2d")!;
-    ctx.fillStyle = "#0b1020";
+    ctx.fillStyle = background;
     ctx.fillRect(0, 0, out.width, out.height);
     for (const c of canvases) if (c.width > 0) ctx.drawImage(c, 0, 0, out.width, out.height);
     return out.toDataURL("image/jpeg", 0.82);
@@ -66,6 +70,14 @@ export function MissionScreen({ mission }: { mission: Mission }) {
   const rightRef = useRef<HTMLDivElement>(null);
   const [pad, setPad] = useState({ top: 80, bottom: 90, left: 440, right: 560 });
   const { comparing, buttonProps } = useCompare();
+  const [hidden, setHidden] = useState<ReadonlySet<LayerGroup>>(new Set());
+  const toggleLayer = (g: LayerGroup) =>
+    setHidden((h) => {
+      const n = new Set(h);
+      if (n.has(g)) n.delete(g);
+      else n.add(g);
+      return n;
+    });
 
   const hood = data?.neighborhoods.find((n) => n.id === mission.area.neighborhood)?.name ?? "this neighborhood";
   const level = mission.levels[levelIndex];
@@ -134,6 +146,15 @@ export function MissionScreen({ mission }: { mission: Mission }) {
     setCodeState(solution);
   });
 
+  const runRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === "r" && !e.metaKey && !e.ctrlKey && !e.altKey && !e.repeat && !isTyping(e.target)) runRef.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   async function run() {
     if (running || !data || !sites) return;
     setRunning(true);
@@ -199,10 +220,12 @@ export function MissionScreen({ mission }: { mission: Mission }) {
     [code, levelIndex, setCode],
   );
 
+  runRef.current = run;
+
   function makeProposal() {
     const r = shown;
     if (!r) return;
-    const snap = snapshotOf(handle.current);
+    const snap = snapshotOf(handle.current, themes[dayMode ? "day" : "night"].land);
     if (snap) saveSnapshot(mission.id, snap);
     setDraft({
       mission,
@@ -217,8 +240,12 @@ export function MissionScreen({ mission }: { mission: Mission }) {
     nav("/proposal/draft");
   }
 
+  const coach = (
+    <Coach key={`${mission.id}-${levelIndex}`} mission={mission} levelIndex={levelIndex} code={code} lastError={lastError} lastCoverage={shown?.metrics.coverage} />
+  );
+
   return (
-    <div className="screen">
+    <div className="app" data-screen="mission">
       {base && (
         <MapView
           ref={handle}
@@ -232,34 +259,46 @@ export function MissionScreen({ mission }: { mission: Mission }) {
           sites={sites}
           dayMode={dayMode}
           cameraPadding={pad}
+          hidden={hidden}
           onSiteClick={onSiteClick}
           onRunStep={(s) => setHighlight(s?.line ?? null)}
           onRunComplete={onRunComplete}
         />
       )}
-      <TopBar backTo={{ to: "/", label: "Home" }} center={`${hood} · Level ${levelIndex + 1}/${mission.levels.length}`} />
+      <div className="vignette" aria-hidden />
+      {shown?.goalMet && <div key={runToken} className="wave" aria-hidden />}
 
-      <div className="panel left glass" ref={leftRef}>
-        {base && data && (
+      <TopBar>
+        <span className="crumb">{hood}</span>
+        {mission.levels.map((l, i) => {
+          const locked = i > unlocked;
+          return (
+            <button key={i} className="pill" aria-current={i === levelIndex} disabled={locked} onClick={() => goLevel(i)} title={locked ? "Finish the last level to unlock" : `${l.title} · ${l.concept}`}>
+              {locked ? <Lock /> : null} Level {i + 1}
+            </button>
+          );
+        })}
+      </TopBar>
+
+      <aside className="glass panel mission-panel" aria-label="Mission" ref={leftRef}>
+        {base && data ? (
           <MissionPanel
             mission={mission}
+            hood={hood}
             levelIndex={levelIndex}
-            unlocked={unlocked}
-            onLevel={goLevel}
             baseline={base}
             shown={shown}
             comparing={comparing}
             data={data}
             formerStores={formerStores}
-            code={code}
-            lastError={lastError}
             onProposal={makeProposal}
           />
+        ) : (
+          <p className="muted">Loading the city…</p>
         )}
-        {!base && <p className="pad">Loading the city…</p>}
-      </div>
+      </aside>
 
-      <div className="panel right glass" ref={rightRef}>
+      <section className="glass panel code-panel" aria-label="Your code" ref={rightRef}>
         <CodePanel
           code={code}
           onChange={onChange}
@@ -274,22 +313,15 @@ export function MissionScreen({ mission }: { mission: Mission }) {
           stdout={stdout}
           problems={runnerStatus.state === "error" ? [`Python could not start: ${runnerStatus.message}`, ...problems] : problems}
           status={status}
+          success={banner?.text}
+          nextLevel={banner?.next ? levelIndex + 2 : undefined}
+          onNext={() => goLevel(levelIndex + 1)}
+          onProposal={banner ? makeProposal : undefined}
+          coach={coach}
         />
-        {runnerStatus.state === "loading" && <div className="py-loading small">Python is waking up… the Run button turns on when it is ready.</div>}
-      </div>
+      </section>
 
-      {banner && (
-        <div className="success glass" role="status">
-          <div className="success-text">✦ {banner.text}</div>
-          <div className="success-actions">
-            {banner.next && <button className="big-btn small-btn" onClick={() => goLevel(levelIndex + 1)}>Next level →</button>}
-            <button className={banner.next ? "ghost-btn" : "big-btn small-btn"} onClick={makeProposal}>📄 Make a proposal</button>
-            <button className="icon-btn" aria-label="Close" onClick={() => setBanner(null)}>×</button>
-          </div>
-        </div>
-      )}
-
-      <Legend walkMinutes={mission.walkMinutes} dayMode={dayMode} showStores={mission.existingSources !== "none"} />
+      <Legend walkMinutes={mission.walkMinutes} showStores={mission.existingSources !== "none"} hidden={hidden} onToggle={toggleLayer} />
     </div>
   );
 }

@@ -102,15 +102,19 @@ If the code has an error, the map does not change. The bad line gets a red under
 
 ## 10. Look and feel
 
-| Token | Value | Used for |
+Palette concept: graphite neutrals plus **one** bold accent, molten iron. Anything that is lit (reached residents, hubs, the meter, Run) is molten. Everything else stays ash-gray. Tokens live in `web/src/theme.ts` and drive both the CSS and the map style.
+
+| Token | Night | Used for |
 |---|---|---|
-| Night | `#0B1020` | Sky and page background |
-| Steel | `#1C2540` | Buildings and panel backgrounds |
-| Ember | `#FF5A3C` | Residents out of reach, errors |
-| Magic gold | `#FFC44D` | Residents in reach, hubs, the meter |
-| Beacon blue | `#5CC8FF` | Existing stores, links, information |
-| Go green | `#3DDC97` | Goal reached |
-| Paper | `#F2F5FF` | Text |
+| bg / land | `#09090B` / `#0C0C0F` | Page and map ground |
+| surface / raised | `#141418` / `#1D1D23` | Panels, unlit meter bars |
+| ash | `#5C5C66` | Residents far from food, quiet UI |
+| muted | `#9A9AA5` | Secondary text |
+| text | `#EDEDF0` | Text, existing stores, shelters |
+| **accent (molten)** | `#FF5A1F` | Residents in reach, hubs, rings, meter, Run, errors (always with an icon and words) |
+| horizon | `#3D1406` | Furnace glow on the map horizon |
+
+The day theme (`D` key) keeps the same accent on light neutrals.
 
 - **Type:** a clean geometric font for the interface (Space Grotesk) and a clear monospace for code (JetBrains Mono).
 - **Sizes for a projector:** body text 18 px, code 20 px, the score 40 px.
