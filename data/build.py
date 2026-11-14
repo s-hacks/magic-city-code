@@ -12,6 +12,8 @@ Sources (all public, no personal data):
   * Census ACS 5-year 2023 - table-based summary-file bulk downloads (the keyless Census API now
                              redirects to "missing key", so we stream the national .dat files and
                              keep only Jefferson County block-group rows). Tables B25044, B01001.
+  * ACS also B17017 (households below poverty) and B28002 (no internet subscription = "internet access
+    without a subscription" + "no internet access"), same bulk-file approach.
   * OpenStreetMap Overpass - supermarkets and candidate hub sites
   * City of Birmingham's 99 official neighborhoods (UAB CHEERS ArcGIS feature service) -> neighborhood bboxes
 
@@ -47,6 +49,7 @@ OVERPASS = [
     "https://overpass.private.coffee/api/interpreter",
 ]
 GEO_PREFIX = "1500000US01073"
+TRACT_PREFIX = "1400000US01073"
 HEADERS = {"User-Agent": "magic-city-code-data-prep/1.0 (hackathon; public data only)"}
 
 # neighborhood id -> (display name, official neighborhood NUMs to union for the bbox)
@@ -61,6 +64,16 @@ NEIGHBORHOODS = {
     "east-thomas": ("East Thomas", [1602, 1603, 1604]),
     "southside": ("Southside", [1701, 1702, 1703]),
     "smithfield": ("Smithfield", [1605]),
+}
+
+
+# Hand-kept overrides: OSM stores that are closed. Key = OSM element id (e.g. "w252203019").
+# Closed stores are removed from stores.json and written to former_stores.json.
+CLOSED_STORES = {
+    # West End / Woodland Park Save-A-Lot, Heritage Park Towne Center. Closed Sept 2023, building empty since
+    # (BirminghamWatch Jan 2025; Bham Now 2023-09-06; research_notes/.../economy_housing_food.md).
+    "w252203019": {"closed_since": "2023-09",
+                   "note": "Closed in September 2023; the building has been empty since (BirminghamWatch, Bham Now). City approved $600K in Jan 2025 for a new store here."},
 }
 
 
@@ -122,11 +135,11 @@ def acs_table(table):
             header = next(lines)
             keep = [header]
             for ln in lines:
-                if ln.startswith(GEO_PREFIX):
+                if ln.startswith(GEO_PREFIX) or ln.startswith(TRACT_PREFIX):
                     keep.append(ln)
         p.write_text("\n".join(keep))
     rows = list(csv.DictReader(p.read_text().splitlines(), delimiter="|"))
-    return {r["GEO_ID"][-12:]: r for r in rows}
+    return {r["GEO_ID"][-12:] if r["GEO_ID"].startswith("15") else r["GEO_ID"][-11:]: r for r in rows}
 
 
 def num(r, col):
@@ -140,11 +153,14 @@ def build_areas(city):
     bg = block_groups()
     veh = acs_table("b25044")
     sex = acs_table("b01001")
+    pov = acs_table("b17017")  # E002 = households with income below poverty level
+    net = acs_table("b28002")  # E012 = internet access without a subscription, E013 = no internet access
     cityp = prep(city)
     # B01001: male under18 E003-E006, female E027-E030; male 65+ E020-E025, female E044-E049
     kid_cols = [f"B01001_E{i:03d}" for i in list(range(3, 7)) + list(range(27, 31))]
     sen_cols = [f"B01001_E{i:03d}" for i in list(range(20, 26)) + list(range(44, 50))]
     areas = []
+    tract_fallback = {"poverty": 0, "no_net": 0}
     for f in bg["features"]:
         gid = f["properties"]["GEOID"]
         g = shape(f["geometry"])
@@ -159,6 +175,22 @@ def build_areas(city):
             continue
         hh = num(v, "B25044_E001")
         nocar = num(v, "B25044_E003") + num(v, "B25044_E010")
+        pv, nt = pov.get(gid), net.get(gid)
+        # Block-group row preferred; if missing/suppressed, split the tract value by household share.
+        def need(row, cols, tract_tbl):
+            if row is not None and row.get(cols[0], "") not in ("", None):
+                return sum(num(row, c_) for c_ in cols)
+            return None
+        poverty = need(pv, ["B17017_E002"], pov)
+        no_net = need(nt, ["B28002_E012", "B28002_E013"], net)
+        if poverty is None or no_net is None:
+            tract_hh = sum(num(veh[k], "B25044_E001") for k in veh if len(k) == 12 and k[:11] == gid[:11]) or 1
+            tr_p, tr_n = pov.get(gid[:11]), net.get(gid[:11])
+            share = hh / tract_hh
+            if poverty is None and tr_p:
+                poverty = round(num(tr_p, "B17017_E002") * share); tract_fallback["poverty"] += 1
+            if no_net is None and tr_n:
+                no_net = round((num(tr_n, "B28002_E012") + num(tr_n, "B28002_E013")) * share); tract_fallback["no_net"] += 1
         simp = g.simplify(0.00008, preserve_topology=True)
         parts = [simp] if simp.geom_type == "Polygon" else list(simp.geoms)
         rings = []
@@ -172,7 +204,10 @@ def build_areas(city):
             "households": hh, "households_no_car": nocar,
             "kids": sum(num(s, c_) for c_ in kid_cols),
             "seniors": sum(num(s, c_) for c_ in sen_cols),
+            "households_poverty": poverty or 0,
+            "households_no_internet": no_net or 0,
         })
+    print(f"  tract-fallback counts (block-group value missing): {tract_fallback}")
     areas.sort(key=lambda a: a["id"])
     return areas
 
@@ -230,7 +265,7 @@ def osm_features(city):
 out center tags;"""
     els = overpass(q, "overpass_all.json")["elements"]
     cityp = prep(city)
-    stores, sites = [], []
+    stores, sites, former = [], [], []
     seen = set()
     grocery_ok = re.compile(r"market|grocer|foods?|fresh|supermarket|piggly|kroger|publix|walmart|aldi|save|winn|sprouts|whole|costco|sam'?s|target|food", re.I)
     bad = re.compile(r"dollar|family dollar|7-eleven|shell|chevron|exxon|rite aid|cvs|walgreens|gas|mart express|convenience|liquor|tobacco|smoke|mexican|meat depot|restaurant|bakery|butcher", re.I)
@@ -246,6 +281,9 @@ out center tags;"""
             if bad.search(name):
                 continue
             if t["shop"] == "grocery" and not grocery_ok.search(name):
+                continue
+            if eid in CLOSED_STORES:
+                former.append({"id": f"store_{eid}", **rec, **CLOSED_STORES[eid]})
                 continue
             stores.append({"id": f"store_{eid}", **rec})
             continue
@@ -265,7 +303,7 @@ out center tags;"""
         sites.append({"id": f"site_{eid}", "kind": kind, **rec})
     # reorder keys to match contract
     sites = [{"id": s["id"], "name": s["name"], "kind": s["kind"], "lat": s["lat"], "lon": s["lon"]} for s in sites]
-    return stores, sites
+    return stores, sites, former
 
 
 def write(name, obj):
@@ -288,15 +326,16 @@ def main():
                 a["neighborhood"] = n["id"]
                 break
     print("OSM...")
-    stores, sites = osm_features(city)
+    stores, sites, former = osm_features(city)
     write("neighborhoods.json", nb)
     write("areas.json", areas)
     write("stores.json", stores)
     write("sites.json", sites)
+    write("former_stores.json", former)
 
     # focus-area report
     print("\nFocus areas")
-    for nid in ("west-end", "ensley"):
+    for nid in ("west-end", "ensley", "woodlawn", "east-lake", "southside"):
         n = next(x for x in nb if x["id"] == nid)
         x0, y0, x1, y1 = n["bbox"]
         inb = lambda lon, lat: x0 <= lon <= x1 and y0 <= lat <= y1
@@ -307,7 +346,8 @@ def main():
                 kinds[s["kind"]] = kinds.get(s["kind"], 0) + 1
         st = [s["name"] for s in stores if inb(s["lon"], s["lat"])]
         print(f"{nid} bbox={n['bbox']}: areas={len(ar)} hh={sum(a['households'] for a in ar)} "
-              f"no_car={sum(a['households_no_car'] for a in ar)} stores={len(st)} {st} sites={kinds}")
+              f"no_car={sum(a['households_no_car'] for a in ar)} poverty={sum(a['households_poverty'] for a in ar)} "
+              f"no_internet={sum(a['households_no_internet'] for a in ar)} kids={sum(a['kids'] for a in ar)} seniors={sum(a['seniors'] for a in ar)} stores={len(st)} {st} sites={kinds}")
     print(f"\nTotals: areas={len(areas)} hh={sum(a['households'] for a in areas)} "
           f"no_car={sum(a['households_no_car'] for a in areas)} stores={len(stores)} sites={len(sites)}")
 
