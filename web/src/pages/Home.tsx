@@ -1,6 +1,6 @@
-// Home: the city at night with the fly-in, one flare per resident problem, a drawer of
-// problem cards (click one that has a mission to open it), the five quick-start mission
-// tiles, and the "Report a problem" button.
+// Home (UI prototype look): the city at night with the fly-in, one flare per resident
+// problem (hover one to read it, click one that has a mission to open it), the hero with a
+// start button per ready mission, and "Report a problem" in the top bar.
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ProblemCard } from "@mcc/shared";
@@ -16,7 +16,6 @@ export function Home() {
   const [problems, setProblems] = useState<ProblemCard[]>([]);
   const [missions, setMissions] = useState<MissionSummary[]>([]);
   const [hover, setHover] = useState<string | null>(null);
-  const [open, setOpen] = useState(true);
 
   useEffect(() => {
     listProblems().then(setProblems);
@@ -37,68 +36,48 @@ export function Home() {
   const canOpen = (p: ProblemCard) => !!p.missionId && approved.has(p.missionId);
   const openProblem = (p?: ProblemCard) => p && canOpen(p) && nav(`/mission/${p.missionId}`);
   const hovered = problems.find((p) => p.id === hover);
+  const [first, ...rest] = missions;
 
   return (
-    <div className="screen">
+    <div className="app" data-screen="home">
       <MapView
         mode="home"
         data={data}
         flares={flares}
         dayMode={dayMode}
-        cameraPadding={{ top: 90, bottom: 140, left: 460, right: 440 }}
+        cameraPadding={{ top: 90, bottom: 60, left: Math.min(window.innerWidth * 0.42, 640), right: 60 }}
         onFlareClick={(f: Flare) => openProblem(problems.find((p) => p.id === f.id))}
         onFlareHover={(f) => setHover(f?.id ?? null)}
       />
-      <TopBar hideBrand />
+      <div className="vignette" aria-hidden />
+      <TopBar actions={<button className="btn ghost" onClick={() => nav("/report")}>Report a problem</button>} />
 
-      <div className="hero glass">
-        <h1>✦ Magic City Code</h1>
-        <p>Real problems from Birmingham neighbors. Write a little Python and light up the city.</p>
-        <button className="big-btn" onClick={() => nav("/report")}>＋ Report a problem</button>
-      </div>
+      <section className="hero">
+        <p className="eyebrow">Birmingham, Alabama · Built on iron, run on code</p>
+        <h1>Write code that <em>lights up</em> the Magic City.</h1>
+        <p className="lede">Every dot is a family. Every flare is a real problem a neighbor told us about. Pick one, write a little Python, and watch your neighborhood glow.</p>
+        <div className="hero-actions">
+          {first && (
+            <button className="btn primary big" onClick={() => nav(`/mission/${first.id}`)}>
+              Start: {first.title} in {hoodName(first.neighborhood)} <span aria-hidden>→</span>
+            </button>
+          )}
+          {rest.map((m) => (
+            <button key={m.id} className="btn ghost" onClick={() => nav(`/mission/${m.id}`)}>
+              {m.title} · {hoodName(m.neighborhood)}
+            </button>
+          ))}
+        </div>
+        <p className="tiny">{problems.length} problems reported · hover a flare to read it</p>
+      </section>
 
-      <aside className={`drawer glass ${open ? "" : "closed"}`} aria-label="Resident problems">
-        <button className="drawer-head" onClick={() => setOpen(!open)} aria-expanded={open}>
-          <span>Neighbors say… ({problems.length})</span>
-          <span aria-hidden="true">{open ? "▾" : "▴"}</span>
-        </button>
-        {open && (
-          <ul className="problem-list">
-            {problems.map((p) => (
-              <li key={p.id}>
-                <button
-                  className={`problem ${hover === p.id ? "hot" : ""}`}
-                  disabled={!canOpen(p)}
-                  onClick={() => openProblem(p)}
-                  onMouseEnter={() => setHover(p.id)}
-                  onMouseLeave={() => setHover(null)}
-                >
-                  <span className="where">{hoodName(p.neighborhood)}</span>
-                  <span className="said">“{p.text}”</span>
-                  <span className="tag">{canOpen(p) ? "Open mission →" : p.missionId ? "Waiting for an adult to approve" : "Saved · no mission yet"}</span>
-                </button>
-              </li>
-            ))}
-            {problems.length === 0 && <li className="muted pad">No problems yet. Report the first one.</li>}
-          </ul>
-        )}
-      </aside>
-
-      {hovered && !open && (
-        <div className="hovercard glass">
-          <strong>{hoodName(hovered.neighborhood)}</strong>
-          <div>“{hovered.text}”</div>
+      {hovered && (
+        <div className={`flare-card glass is-shown${canOpen(hovered) ? " has-mission" : ""}`} role="status">
+          <div className="flare-hood">{hoodName(hovered.neighborhood)}</div>
+          <div className="flare-quote">“{hovered.text}”</div>
+          <div className="flare-cta">{canOpen(hovered) ? "Click the flare to open the mission →" : hovered.missionId ? "Waiting for an adult to approve" : "Saved · mission in the works"}</div>
         </div>
       )}
-
-      <section className="tiles" aria-label="Quick-start missions">
-        {missions.map((m) => (
-          <button key={m.id} className="tile glass" onClick={() => nav(`/mission/${m.id}`)}>
-            <span className="tile-title">{m.title}</span>
-            <span className="tile-sub">{hoodName(m.neighborhood)}</span>
-          </button>
-        ))}
-      </section>
     </div>
   );
 }

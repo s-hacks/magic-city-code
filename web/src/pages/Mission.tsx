@@ -29,19 +29,19 @@ export function MissionPage() {
 
   if (state === "ok" && mission) return <MissionScreen key={mission.id} mission={mission} />;
   return (
-    <div className="screen plain">
+    <div className="app plain">
       <TopBar />
       <div className="center-card glass">
         {state === "loading" ? <h2>Loading mission…</h2> : state === "pending" ? (
           <>
             <h2>This mission is waiting for an adult to approve it</h2>
             <p className="muted">Ask a grown-up to approve it, then come back.</p>
-            <Link className="big-btn" to="/">Back to the city</Link>
+            <Link className="big-btn" to="/city">Back to the city</Link>
           </>
         ) : (
           <>
             <h2>We couldn't find that mission</h2>
-            <Link className="big-btn" to="/">Back to the city</Link>
+            <Link className="btn primary" to="/city">Back to the city</Link>
           </>
         )}
       </div>

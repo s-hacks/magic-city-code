@@ -102,15 +102,20 @@ If the code has an error, the map does not change. The bad line gets a red under
 
 ## 10. Look and feel
 
-| Token | Value | Used for |
+Palette "Magic City After Dark": a deep indigo night, a violet → blue → cyan brand gradient (logo, headline, primary buttons), and signal colors that mean the same thing everywhere. Tokens live in `web/src/theme.ts` and drive both the CSS and the map style.
+
+| Token | Night | Meaning |
 |---|---|---|
-| Night | `#0B1020` | Sky and page background |
-| Steel | `#1C2540` | Buildings and panel backgrounds |
-| Ember | `#FF5A3C` | Residents out of reach, errors |
-| Magic gold | `#FFC44D` | Residents in reach, hubs, the meter |
-| Beacon blue | `#5CC8FF` | Existing stores, links, information |
-| Go green | `#3DDC97` | Goal reached |
-| Paper | `#F2F5FF` | Text |
+| bg / surface / raised | `#070A1C` / `#0D1230` / `#161D47` | Page, panels, controls |
+| violet → blue → cyan | `#9B6BFF` → `#4D7CFF` → `#3EE6FF` | Brand gradient; blue/cyan = explored by your code |
+| gold (accent) | `#FFC53D` | Your route, lit residents, success moments |
+| orange | `#FF7A2F` | Problems, floods, repeated work |
+| red | `#FF4D6A` | Errors, failed checks |
+| green | `#2EE6A6` | Passed tests, Submit, grocery stores (fresh food) |
+| pink | `#FF5CAA` | Strings in code |
+| map | water `#123E8C`, parks `#0E3A3A`, roads `#1F2A66`, motorways violet, buildings indigo → violet by height, violet horizon | Colorful but dark, so the signal colors stay on top |
+
+The day theme (`D` key) keeps the same signal colors on light neutrals.
 
 - **Type:** a clean geometric font for the interface (Space Grotesk) and a clear monospace for code (JetBrains Mono).
 - **Sizes for a projector:** body text 18 px, code 20 px, the score 40 px.

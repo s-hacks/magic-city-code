@@ -24,6 +24,7 @@
 //                   new runToken) or `mission` changed; onRunComplete will NOT fire for it.
 //   dayMode         brighter map for washed-out projectors
 //   cameraPadding   pixels kept clear for floating panels when framing a mission
+//   hidden          layer groups switched off by the legend chips (see layerGroups.ts)
 //
 // Ref handle (optional): { flyIn(), flyToMission(), getMap() }.
 //
@@ -55,6 +56,7 @@ import { hazeLayer, type HazeView } from "./layers/haze";
 import { DROP_MS, hubLayers, layoutHubLabels, type TimedHub } from "./layers/hubs";
 import { flareLayers, type Flare, type TimedFlare } from "./layers/flares";
 import { waveLayers, WAVE_MS, type Wave } from "./layers/wave";
+import type { LayerGroup } from "./layerGroups";
 
 export type { Flare } from "./layers/flares";
 
@@ -82,6 +84,7 @@ export interface MapViewProps {
   onRunCancel?: () => void;
   dayMode?: boolean;
   cameraPadding?: PaddingOptions;
+  hidden?: ReadonlySet<LayerGroup>;
 }
 
 export interface MapViewHandle {
@@ -103,8 +106,10 @@ const STYLE_RETRY_MS = 10000;
 interface Tooltip {
   x: number;
   y: number;
-  title: string;
-  sub?: string;
+  kind: string;
+  name: string;
+  stats?: string[];
+  hint?: string;
 }
 
 /** Mutable view state read by the animation loop. Never triggers React renders. */
@@ -186,11 +191,11 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     const p = propsRef.current;
     const bbox = missionBbox();
     if (p.mode === "mission" && bbox) flyToMission(map, bbox, padding());
-    else flyIn(map);
+    else flyIn(map, p.cameraPadding);
   };
 
   useImperativeHandle(ref, () => ({
-    flyIn: () => mapRef.current && flyIn(mapRef.current),
+    flyIn: () => mapRef.current && flyIn(mapRef.current, propsRef.current.cameraPadding),
     flyToMission: () => {
       const bbox = missionBbox();
       if (mapRef.current && bbox) flyToMission(mapRef.current, bbox, padding());
@@ -277,6 +282,26 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       if (fallback && !isRetry) styleRetry.current = window.setTimeout(() => applyStyle(day, true), STYLE_RETRY_MS);
     });
   }
+
+  // ---- Legend toggles for base-map layers (streets, buildings) ----
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const apply = () => {
+      const hidden = propsRef.current.hidden;
+      for (const l of map.getStyle()?.layers ?? []) {
+        const group = (l.metadata as { group?: LayerGroup } | undefined)?.group;
+        if (!group) continue;
+        const want = hidden?.has(group) ? "none" : "visible";
+        if (map.getLayoutProperty(l.id, "visibility") !== want) map.setLayoutProperty(l.id, "visibility", want);
+      }
+    };
+    if (map.isStyleLoaded()) apply();
+    map.on("styledata", apply); // re-apply after a day/night style swap
+    return () => {
+      map.off("styledata", apply);
+    };
+  }, [props.hidden]);
 
   // ---- Camera on mode / mission change ----
   const firstCam = useRef(true);
@@ -405,15 +430,21 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
         ? {
             x: info.x,
             y: info.y,
-            title: `${s.name} · ${s.families_nearby.toLocaleString()} families nearby`,
-            sub: `${KIND_LABEL[s.kind]} · ${s.families_without_car.toLocaleString()} without a car · ${Math.round(s.minutes_to_store)} min walk to a store`,
+            kind: KIND_LABEL[s.kind],
+            name: s.name,
+            stats: [
+              `${s.families_nearby.toLocaleString()} families nearby`,
+              `${s.families_without_car.toLocaleString()} without a car`,
+              `${Math.round(s.minutes_to_store)} min walk to a store`,
+            ],
+            hint: "Click to add to your code",
           }
-        : { x: info.x, y: info.y, title: site.name, sub: KIND_LABEL[site.kind] };
+        : { x: info.x, y: info.y, kind: KIND_LABEL[site.kind], name: site.name };
     } else if (obj && (id === "hub-beam" || id === "hub-base-glow" || id === "hub-labels")) {
       const h = (obj as { hub: TimedHub }).hub;
-      tip = { x: info.x, y: info.y, title: h.name, sub: `Hub ${h.order + 1} · ${KIND_LABEL[h.kind]}` };
+      tip = { x: info.x, y: info.y, kind: `Hub ${h.order + 1} · ${KIND_LABEL[h.kind]}`, name: h.name };
     } else if (obj && id === "store-glow") {
-      tip = { x: info.x, y: info.y, title: (obj as Store).name, sub: "Grocery store" };
+      tip = { x: info.x, y: info.y, kind: "Grocery store", name: (obj as Store).name };
     } else if (obj && (id === "flare-heads" || id === "flare-labels")) {
       flareId = (obj.f as TimedFlare).id;
     }
@@ -522,8 +553,9 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     }
 
     // Hub ground rings go under the residents; beams and labels go over them.
+    const on = (g: LayerGroup) => !p.hidden?.has(g);
     let hub: ReturnType<typeof hubLayers> = [];
-    if (inMission && !comparing && vs.hubs.length) {
+    if (inMission && !comparing && vs.hubs.length && on("hubs")) {
       const fullLabel = layoutHubLabels(vs.hubs, (lon, lat) => {
         const pt = map.project([lon, lat]);
         return [pt.x, pt.y];
@@ -531,12 +563,12 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       hub = hubLayers(vs.hubs, vs.walkRadius, ctx, fullLabel);
     }
     const layers: any[] = [];
-    if (vs.haze) layers.push(hazeLayer(vs.haze, ctx));
+    if (vs.haze && on("need")) layers.push(hazeLayer(vs.haze, ctx));
     layers.push(...hub.slice(0, 3));
     if (inMission) layers.push(...waveLayers(vs.wave, ctx));
-    if (data) layers.push(...storeLayers(data.stores, ctx));
-    if (inMission && vs.sites.length) layers.push(...siteLayers(vs.sites, vs.hoveredSite, ctx));
-    if (vs.resView) layers.push(residentsLayer(vs.resView, ctx));
+    if (data && on("stores")) layers.push(...storeLayers(data.stores, ctx));
+    if (inMission && vs.sites.length && on("sites")) layers.push(...siteLayers(vs.sites, vs.hoveredSite, ctx));
+    if (vs.resView && on("residents")) layers.push(residentsLayer(vs.resView, ctx));
     layers.push(...hub.slice(3));
     if (flares.length) layers.push(...flareLayers(flares, vs.hoveredFlare, ctx));
     overlay.setProps({ layers });
@@ -547,8 +579,14 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       <div ref={containerRef} style={{ position: "absolute", inset: 0 }} />
       {tooltip && (
         <div className="mcc-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
-          <div>{tooltip.title}</div>
-          {tooltip.sub && <div className="sub">{tooltip.sub}</div>}
+          <div className="pop-kind">{tooltip.kind}</div>
+          <div className="pop-name">{tooltip.name}</div>
+          {tooltip.stats && (
+            <div className="pop-stats">
+              {tooltip.stats.map((t) => <span key={t}>{t}</span>)}
+            </div>
+          )}
+          {tooltip.hint && <div className="pop-hint">{tooltip.hint}</div>}
         </div>
       )}
     </div>

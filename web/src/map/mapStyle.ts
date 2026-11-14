@@ -1,9 +1,12 @@
 // Builds the MapLibre base style: OpenFreeMap "positron" restyled at load time.
-// Night = near-black navy land, steel-blue 3D buildings, muted roads, dim labels.
-// Day = the same layout in brighter colors for washed-out projectors.
+// Colors come from the UI tokens in ../theme.ts: graphite land and buildings, quiet
+// roads, dim labels. Day = the same layout on light neutrals for washed-out projectors.
+// Road and building layers carry metadata.group ("streets" / "buildings") so the
+// legend chips can hide them.
 // If the tile server cannot be reached (6 s timeout), a plain background style is
 // used so the deck.gl lights still show; MapView retries in the background.
 import type { StyleSpecification, LayerSpecification } from "maplibre-gl";
+import { themes, type ThemeName } from "../theme";
 
 const BASE_URL = "https://tiles.openfreemap.org/styles/positron";
 
@@ -28,47 +31,33 @@ interface Look {
   textOpacity: number;
 }
 
-const NIGHT_LOOK: Look = {
-  background: "#0B1020",
-  park: "#0E1A26",
-  water: "#06142A",
-  residential: "#0D1326",
-  wood: "#0E1924",
-  waterway: "#0C2240",
-  buildingLow: "#202B4D",
-  buildingHigh: "#3A4F85",
-  buildingOpacity: 0.92,
-  motorway: "#3A4768",
-  major: "#2B3756",
-  minor: "#1C2541",
-  casing: "#0F1529",
-  rail: "#232D48",
-  boundary: "#2A3350",
-  text: "#8D99BC",
-  textHalo: "#0B1020",
-  textOpacity: 0.6,
-};
+function lookFor(name: ThemeName): Look {
+  const t = themes[name];
+  const night = name === "night";
+  return {
+    background: t.land,
+    park: t.park,
+    water: t.water,
+    residential: t.land,
+    wood: t.park,
+    waterway: t.water,
+    buildingLow: t.buildingLow,
+    buildingHigh: t.buildingHigh,
+    buildingOpacity: 0.92,
+    motorway: t.violet, // motorways read violet in the "After Dark" map
+    major: t.roadMajor,
+    minor: t.road,
+    casing: night ? t.land : t.line,
+    rail: t.road,
+    boundary: t.line,
+    text: t.muted,
+    textHalo: t.bg,
+    textOpacity: night ? 0.55 : 0.85,
+  };
+}
 
-const DAY_LOOK: Look = {
-  background: "#E8ECF4",
-  park: "#D5E5D3",
-  water: "#A8C6E8",
-  residential: "#E0E4EE",
-  wood: "#CFE0CC",
-  waterway: "#A8C6E8",
-  buildingLow: "#B3BED3",
-  buildingHigh: "#8796B6",
-  buildingOpacity: 0.85,
-  motorway: "#FFFFFF",
-  major: "#FFFFFF",
-  minor: "#F7F8FB",
-  casing: "#C3CAD9",
-  rail: "#B8BFCE",
-  boundary: "#9AA3B8",
-  text: "#3E4A66",
-  textHalo: "#FFFFFF",
-  textOpacity: 0.9,
-};
+const NIGHT_LOOK = lookFor("night");
+const DAY_LOOK = lookFor("day");
 
 const FETCH_TIMEOUT_MS = 6000;
 const FALLBACK_KEY = "mcc:fallback";
@@ -117,6 +106,7 @@ function restyleLayer(layer: LayerSpecification, k: Look): LayerSpecification | 
           source: l.source,
           "source-layer": "building",
           minzoom: 12.5,
+          metadata: { group: "buildings" },
           paint: {
             "fill-extrusion-color": [
               "interpolate", ["linear"], ["coalesce", ["get", "render_height"], ["get", "height"], 6],
@@ -147,6 +137,7 @@ function restyleLayer(layer: LayerSpecification, k: Look): LayerSpecification | 
         l.paint["line-color"] = k.boundary;
         l.paint["line-opacity"] = 0.5;
       } else {
+        if (l["source-layer"] === "transportation") l.metadata = { ...(l.metadata ?? {}), group: "streets" };
         l.paint["line-color"] = roadColor(id, k);
         if (l.paint["line-opacity"] === undefined) l.paint["line-opacity"] = 0.95;
       }

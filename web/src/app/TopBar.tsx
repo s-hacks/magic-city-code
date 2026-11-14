@@ -1,24 +1,30 @@
-// Top bar shared by every screen: brand (home link), an optional centre label
-// ("West End · Level 2/3"), Python load status, and the Day/Night switch (also the D key).
-import { useEffect } from "react";
-import { Link } from "react-router-dom";
+// Top bar shared by every screen (UI prototype look): the brand (home link, also the
+// H key), whatever the screen puts in the middle (level pills on the Mission screen),
+// the Python status pill, and the projector-mode switch (also the D key).
+import { useEffect, type ReactNode } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useApp } from "../mission/AppContext";
+import { Mark, Moon, Sun } from "./icons";
 
-function isTyping(t: EventTarget | null) {
+export function isTyping(t: EventTarget | null) {
   const el = t as HTMLElement | null;
   return !!el && (["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName) || el.isContentEditable || !!el.closest?.(".cm-editor"));
 }
 
-export function TopBar({ center, backTo, hideBrand }: { center?: string; hideBrand?: boolean; backTo?: { to: string; label: string } }) {
+export function TopBar({ children, actions }: { children?: ReactNode; actions?: ReactNode }) {
   const { runnerStatus, dayMode, toggleDay } = useApp();
+  const nav = useNavigate();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === "d" && !e.metaKey && !e.ctrlKey && !e.altKey && !isTyping(e.target)) toggleDay();
+      if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
+      const k = e.key.toLowerCase();
+      if (k === "d") toggleDay();
+      if (k === "h") nav("/#missions");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [toggleDay]);
+  }, [toggleDay, nav]);
 
   let python: string;
   let cls = "";
@@ -35,15 +41,17 @@ export function TopBar({ center, backTo, hideBrand }: { center?: string; hideBra
 
   return (
     <header className="topbar">
-      <Link to="/" className="brand" style={hideBrand ? { visibility: "hidden" } : undefined}>✦ Magic City Code</Link>
-      {backTo && <Link to={backTo.to} className="chip">← {backTo.label}</Link>}
-      <div className="topcenter">{center}</div>
-      <span className={`chip status ${cls}`} title={runnerStatus.state === "error" ? runnerStatus.message : runnerStatus.state === "loading" ? runnerStatus.message : "Python is ready"}>
-        <span className="pip" aria-hidden="true" /> {python}
-      </span>
-      <button className="chip" onClick={toggleDay} aria-pressed={dayMode} title="Press D">
-        {dayMode ? "☀ Day" : "☾ Night"} map
-      </button>
+      <Link to="/" className="brand" title="Home (H)"><Mark /> Magic City Code</Link>
+      <nav className="levels" aria-label="Mission">
+        {children}
+        <span className={`pill status ${cls}`} title={"message" in runnerStatus ? runnerStatus.message : "Python is ready"}>
+          <span className="pip" aria-hidden="true" /> {python}
+        </span>
+        {actions}
+        <button className="icon-btn" onClick={toggleDay} aria-pressed={dayMode} title="Projector mode (D)" aria-label="Toggle projector mode">
+          {dayMode ? <Moon /> : <Sun />}
+        </button>
+      </nav>
     </header>
   );
 }

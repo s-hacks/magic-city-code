@@ -82,17 +82,17 @@ export function ProposalPage() {
 
   if (missing) {
     return (
-      <div className="screen plain">
+      <div className="app plain">
         <TopBar />
         <div className="center-card glass">
           <h2>No proposal here yet</h2>
           <p className="muted">Finish a level, then press “Make a proposal”.</p>
-          <Link className="big-btn" to="/">Back to the city</Link>
+          <Link className="btn primary" to="/city">Back to the city</Link>
         </div>
       </div>
     );
   }
-  if (!view) return <div className="screen plain"><TopBar /></div>;
+  if (!view) return <div className="app plain"><TopBar /></div>;
 
   const { proposal: p, mission } = view;
   const words = mission ? needWords(mission) : { who: "households", place: "food" };
@@ -100,19 +100,19 @@ export function ProposalPage() {
 
   return (
     <div className="proposal-page">
-      <div className="no-print"><TopBar backTo={mission ? { to: `/mission/${mission.id}`, label: "Mission" } : { to: "/", label: "Home" }} /></div>
+      <div className="no-print"><TopBar actions={<Link className="btn ghost" to={mission ? `/mission/${mission.id}` : "/"}>← {mission ? "Back to the mission" : "Home"}</Link>} /></div>
       <div className="paper-wrap">
         <div className="paper-tools no-print">
           {!saved ? (
             <>
               <label htmlFor="nm">Your first name or nickname</label>
               <input id="nm" value={name} maxLength={20} onChange={(e) => setName(e.target.value)} placeholder="First name only" />
-              <button className="big-btn small-btn" disabled={!name.trim()} onClick={save}>Save proposal</button>
+              <button className="btn primary" disabled={!name.trim()} onClick={save}>Save proposal</button>
             </>
           ) : (
             <>
               <span className="ok-text">✓ Saved</span>
-              <button className="big-btn small-btn" onClick={() => window.print()}>🖨 Print</button>
+              <button className="btn primary" onClick={() => window.print()}>Print</button>
             </>
           )}
           {note && <span className="muted small">{note}</span>}

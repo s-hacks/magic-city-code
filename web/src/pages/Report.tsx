@@ -2,7 +2,7 @@
 // words to the mission maker, shows the mission it made, and an adult approves it with
 // one click before it opens.
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { GenerateResponse, Mission, ProblemCard } from "@mcc/shared";
 import { MapView } from "../map/MapView";
 import { TopBar } from "../app/TopBar";
@@ -71,17 +71,19 @@ export function Report() {
   }
 
   return (
-    <div className="screen">
+    <div className="app" data-screen="report">
       <MapView mode="home" data={data} flares={flares} dayMode={dayMode} cameraPadding={{ top: 90, bottom: 60, left: 60, right: 700 }} />
-      <TopBar backTo={{ to: "/", label: "Home" }} />
+      <div className="vignette" aria-hidden />
+      <TopBar actions={<Link className="btn ghost" to="/city">← Back to the city</Link>} />
       <div className="report glass">
         {(phase.k === "form" || phase.k === "error") && (
           <>
-            <h2>Report a problem</h2>
-            <p className="muted">Tell us something that is hard in your neighborhood. Please do not write names, phone numbers or addresses.</p>
-            <label htmlFor="problem">What is the problem?</label>
+            <p className="eyebrow">Report a problem</p>
+            <h2>What's wrong in your neighborhood?</h2>
+            <p className="muted">Say it the way you'd tell a friend. Please leave out names, phone numbers and addresses.</p>
+            <label className="field" htmlFor="problem"><span>The problem</span></label>
             <textarea id="problem" rows={3} value={text} maxLength={400} onChange={(e) => setText(e.target.value)} placeholder="For example: There's no grocery store near me…" />
-            <label htmlFor="hood">Which neighborhood?</label>
+            <label className="field" htmlFor="hood"><span>Neighborhood</span></label>
             <select id="hood" value={hood} onChange={(e) => setHood(e.target.value)}>
               <option value="">Not sure</option>
               {data?.neighborhoods.map((n) => (
@@ -101,12 +103,12 @@ export function Report() {
                 <p>{phase.message}</p>
                 <div className="seed-choices">
                   {seeds.map((m) => (
-                    <button key={m.id} className="chip strong" onClick={() => nav(`/mission/${m.id}`)}>{m.title}</button>
+                    <button key={m.id} className="btn ghost" onClick={() => nav(`/mission/${m.id}`)}>{m.title}</button>
                   ))}
                 </div>
               </div>
             )}
-            <button className="big-btn" disabled={!text.trim()} onClick={submit}>Make a mission</button>
+            <div className="row end"><button className="btn primary big" disabled={!text.trim()} onClick={submit}>Launch flare · make a mission</button></div>
           </>
         )}
 
@@ -123,14 +125,14 @@ export function Report() {
             <h2>Thank you for telling us</h2>
             <p>{phase.reason}</p>
             <p className="muted">Your problem card was saved on the board, so it is not lost. Missions for this kind of problem are coming later.</p>
-            <button className="big-btn" onClick={() => setPhase({ k: "form" })}>Report another problem</button>
+            <button className="btn primary" onClick={() => setPhase({ k: "form" })}>Report another problem</button>
           </>
         )}
 
         {phase.k === "preview" && (
           <>
             <h2>{phase.mission.title}</h2>
-            <p className="quote">“{phase.mission.residentQuote}”</p>
+            <blockquote className="quote">“{phase.mission.residentQuote}”</blockquote>
             <p>{phase.mission.story}</p>
             <ul className="facts">
               <li><b>Neighborhood:</b> {hoodName(phase.mission.area.neighborhood)}</li>
@@ -143,8 +145,8 @@ export function Report() {
               ))}
             </ol>
             <div className="approve-row">
-              <button className="big-btn" disabled={approving} onClick={() => approve(phase.mission)}>✓ Approve and open</button>
-              <button className="ghost-btn" onClick={() => setPhase({ k: "form" })}>Start over</button>
+              <button className="btn primary big" disabled={approving} onClick={() => approve(phase.mission)}>✓ Approve and open</button>
+              <button className="btn ghost" onClick={() => setPhase({ k: "form" })}>Start over</button>
             </div>
             <p className="muted small">An adult approves a mission before students see it.{phase.source === "fallback" ? " (Made from a ready template.)" : ""}</p>
           </>

@@ -8,6 +8,7 @@ import { createPythonRunner, type PythonRunner, type RunnerStatus } from "../cod
 import { loadCityData } from "../map/dataLoader";
 import { fetchMission, loadFormerStores } from "./api";
 import { readStore, writeStore } from "./storage";
+import { applyCssVars } from "../theme";
 
 export interface ProposalDraft {
   mission: Mission;
@@ -53,6 +54,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [draft, setDraft] = useState<ProposalDraft | null>(null);
   const missions = useRef(new Map<string, Mission>());
 
+  useEffect(() => applyCssVars(dayMode ? "day" : "night"), [dayMode]);
   useEffect(() => runner.onStatus(setRunnerStatus), [runner]);
   useEffect(() => {
     runner.ready.catch(() => {}); // the status shows the problem
