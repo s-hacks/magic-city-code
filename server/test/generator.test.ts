@@ -1,3 +1,4 @@
+// Checks mission generation with AI off: the seed fallback path.
 import { describe, expect, it } from "vitest";
 import { generateMission } from "../src/generator";
 import { loadCity } from "../src/city";

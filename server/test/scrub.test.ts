@@ -1,3 +1,4 @@
+// Checks that names, phone numbers and addresses are removed from resident text.
 import { describe, expect, it } from "vitest";
 import { scrub } from "../src/scrub";
 
