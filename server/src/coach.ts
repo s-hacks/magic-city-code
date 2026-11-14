@@ -83,25 +83,31 @@ export interface CoachDeps {
   firstTokenMs?: number;
 }
 
-/** Streams a hint through `write`. Returns where it came from. */
-export async function runCoach(
-  req: Omit<CoachRequest, "missionId" | "mission">,
-  /** The server's stored copy when it has one; otherwise the browser's copy (no solutions). */
-  mission: CoachMission,
-  write: (chunk: string) => void,
-  deps: CoachDeps = {},
-): Promise<{ source: "ai" | "fallback"; note?: string }> {
-  const levelIndex = Math.max(0, Math.min(mission.levels.length - 1, Math.floor(req.levelIndex || 0)));
-  const level = mission.levels[levelIndex];
-  const step = hintStep(req.hintsGiven);
-  const claude = deps.claude === undefined ? getClaude() : deps.claude;
+/** What one guarded coach reply needs: the prompt, the stored hint, and the code it must not repeat. */
+export interface GuardedReply {
+  system: string[]; // cached blocks, fixed rules first
+  user: string;
+  fallback: string; // sent when Claude is off, slow, refuses, errors, or starts leaking
+  solution: string;
+  starterCode: string;
+  maxTokens?: number;
+}
 
+export type ReplySource = { source: "ai" | "fallback"; note?: string };
+
+/**
+ * Streams one coach reply through `write`: Claude when a key is set, the stored hint otherwise.
+ * Text is held back until a line or sentence ends, and the stream stops if it starts repeating
+ * the solution. Shared by Sparks on the mission screen and the challenge coach.
+ */
+export async function streamGuarded(r: GuardedReply, write: (chunk: string) => void, deps: CoachDeps = {}): Promise<ReplySource> {
+  const claude = deps.claude === undefined ? getClaude() : deps.claude;
   if (!claude) {
-    write(fallbackHint(level, step));
+    write(r.fallback);
     return { source: "fallback", note: "no Claude key" };
   }
 
-  const guard = createLeakGuard(level.solution ?? "", level.starterCode);
+  const guard = createLeakGuard(r.solution, r.starterCode);
   // Our own abort: fires when the student leaves, or when no text arrives in time.
   const abort = new AbortController();
   const onClientAbort = () => abort.abort();
@@ -117,28 +123,12 @@ export async function runCoach(
     const stream = claude.beta.messages.stream(
       {
         model: COACH_MODEL,
-        max_tokens: 4096,
+        max_tokens: r.maxTokens ?? 4096,
         betas: [FALLBACK_BETA],
         fallbacks: "default",
         output_config: { effort: "low" },
-        system: [
-          { type: "text", text: COACH_RULES, cache_control: { type: "ephemeral" } },
-          { type: "text", text: levelContext(mission, level), cache_control: { type: "ephemeral" } },
-        ],
-        messages: [
-          {
-            role: "user",
-            content: coachUserMessage({
-              step,
-              // Students sometimes type their name or address; scrub before it reaches the model.
-              code: scrubCode(req.code ?? ""),
-              lastError: req.lastError,
-              lastCoverage: req.lastCoverage,
-              question: req.question ? scrub(req.question) : undefined,
-              teacherHint: fallbackHint(level, step),
-            }),
-          },
-        ],
+        system: r.system.map((text) => ({ type: "text" as const, text, cache_control: { type: "ephemeral" as const } })),
+        messages: [{ role: "user", content: r.user }],
       },
       { signal: abort.signal },
     );
@@ -156,7 +146,7 @@ export async function runCoach(
     }
     if (guard.blocked) {
       if (guard.sentAnything) write(" Let's keep the rest for you to figure out!");
-      else write(fallbackHint(level, step));
+      else write(r.fallback);
       return { source: guard.sentAnything ? "ai" : "fallback", note: "reply repeated solution code; stopped" };
     }
 
@@ -165,21 +155,53 @@ export async function runCoach(
     if (tail) write(tail);
     // Check why the model stopped. A refusal or an empty reply gets the stored hint instead.
     if (final.stop_reason === "refusal" || !guard.sentAnything) {
-      if (!guard.sentAnything) write(fallbackHint(level, step));
+      if (!guard.sentAnything) write(r.fallback);
       return { source: guard.sentAnything ? "ai" : "fallback", note: `stop_reason ${final.stop_reason}` };
     }
     return { source: "ai" };
   } catch (err) {
     if (deps.signal?.aborted) return { source: "ai", note: "client went away" };
     if (firstTokenTimedOut && !guard.sentAnything) {
-      write(fallbackHint(level, step));
+      write(r.fallback);
       return { source: "fallback", note: "no reply within the first-token deadline" };
     }
     // Anything already streamed stays; otherwise the student still gets a hint.
-    if (!guard.sentAnything) write(fallbackHint(level, step));
+    if (!guard.sentAnything) write(r.fallback);
     return { source: "fallback", note: describeError(err) };
   } finally {
     clearTimeout(firstTokenTimer);
     deps.signal?.removeEventListener("abort", onClientAbort);
   }
+}
+
+/** Streams a hint through `write`. Returns where it came from. */
+export async function runCoach(
+  req: Omit<CoachRequest, "missionId" | "mission">,
+  /** The server's stored copy when it has one; otherwise the browser's copy (no solutions). */
+  mission: CoachMission,
+  write: (chunk: string) => void,
+  deps: CoachDeps = {},
+): Promise<ReplySource> {
+  const levelIndex = Math.max(0, Math.min(mission.levels.length - 1, Math.floor(req.levelIndex || 0)));
+  const level = mission.levels[levelIndex];
+  const step = hintStep(req.hintsGiven);
+  return streamGuarded(
+    {
+      system: [COACH_RULES, levelContext(mission, level)],
+      user: coachUserMessage({
+        step,
+        // Students sometimes type their name or address; scrub before it reaches the model.
+        code: scrubCode(req.code ?? ""),
+        lastError: req.lastError,
+        lastCoverage: req.lastCoverage,
+        question: req.question ? scrub(req.question) : undefined,
+        teacherHint: fallbackHint(level, step),
+      }),
+      fallback: fallbackHint(level, step),
+      solution: level.solution ?? "",
+      starterCode: level.starterCode,
+    },
+    write,
+    deps,
+  );
 }

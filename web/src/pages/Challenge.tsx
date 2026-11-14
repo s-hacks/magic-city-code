@@ -1,5 +1,6 @@
 // Challenge page (from the UI prototype): problem statement + editor on the left, the
-// map replay and test results on the right. Run checks the visible tests, Submit the hidden ones.
+// map replay and test results in the middle, and Sparks, the AI coding coach, on the right.
+// Run checks the visible tests, Submit the hidden ones.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
@@ -11,6 +12,8 @@ import type { BaseTest, Challenge, RunOptions, Verdict, Viz } from '../challenge
 import type { ThemeName } from '../theme';
 import { BIRMINGHAM } from '../data/mock';
 import { Mark } from '../app/icons';
+import CoachPanel from '../challenges/CoachPanel';
+import type { ChallengeCoachAction } from '@mcc/shared';
 
 interface Row<T> { test: T; run: TestRun | null; verdict: Verdict | null }
 const REPLAY_SECONDS = 6;
@@ -37,6 +40,10 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
   const [len, setLen] = useState(0);
   const [playing, setPlaying] = useState(false);
   const draftKey = `draft:${ch.id}`;
+  // Sparks starts open when there is room for a third column.
+  const [agent, setAgent] = useState(() => window.innerWidth >= 1280);
+  const [ask, setAsk] = useState<{ action: ChallengeCoachAction; n: number } | null>(null);
+  const askSparks = (action: ChallengeCoachAction) => { setAgent(true); setAsk((a) => ({ action, n: (a?.n ?? 0) + 1 })); };
 
   // --- load data + map + python ---------------------------------------------
   useEffect(() => {
@@ -188,13 +195,14 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
   const passed = rows.filter((r) => r.verdict?.ok).length;
 
   return (
-    <div className="challenge">
+    <div className="challenge" data-agent={agent ? 'open' : undefined}>
       <header className="cbar">
         <button className="brand link" onClick={onHome} title="Home (H)"><Mark /> Magic City Code</button>
         <div className="ctitle">
           <button className="crumb link-btn quiet" onClick={onList}>Challenges /</button> {ch.title}
           <span className={`diff ${ch.difficulty.toLowerCase()}`}>{ch.difficulty}</span>
         </div>
+        <button className="btn ghost small agent-toggle" aria-pressed={agent} onClick={() => setAgent((a) => !a)} title="Sparks, your AI coding coach">✦ Sparks</button>
         <button className="icon-btn" onClick={onTheme} title="Projector mode (D)" aria-label="Toggle projector mode">{theme === 'night' ? '☀' : '☾'}</button>
       </header>
 
@@ -276,6 +284,7 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
               <div className="verdict-title">{cur.verdict ? cur.verdict.title : 'Not run (an earlier test failed)'}</div>
               {cur.verdict && <div className="verdict-detail">{cur.verdict.detail}</div>}
               <div className="tiny">{cur.test.visible || cur.verdict ? cur.test.name : 'Hidden test'}{cur.run ? ` · ${cur.run.ms} ms · ${(cur.run.events.length / 3).toLocaleString()} steps` : ''}</div>
+              {cur.verdict && !cur.verdict.ok && <button className="link-btn ask-why" onClick={() => askSparks('explain-failure')}>✦ Ask Sparks why →</button>}
             </div>
           ) : (
             <p className="muted small-p">Press <strong>Run</strong> to try the two sample cases and watch your code explore the streets. <strong>Submit</strong> also runs hidden tests.</p>
@@ -283,6 +292,22 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
           {accepted && <div className="accepted">All {rows.length} tests passed. Every kid on this list can find their way to fresh food.</div>}
         </div>
       </section>
+
+      {agent && (
+        <CoachPanel
+          challengeId={ch.id}
+          conceptLabel={CONCEPT[ch.id] ?? 'Explain the idea'}
+          getCode={() => editor.current?.getCode() ?? ''}
+          verdict={cur?.verdict ? { ...cur.verdict, testName: cur.test.visible || cur.verdict ? cur.test.name : undefined } : null}
+          flood={flood}
+          trigger={ask}
+          onLine={(n) => editor.current?.mark(n, 'run')}
+          onClose={() => setAgent(false)}
+        />
+      )}
     </div>
   );
 }
+
+/** The "explain the idea" button label per challenge. */
+const CONCEPT: Record<string, string> = { 'route-to-fresh-food': 'Explain Dijkstra' };

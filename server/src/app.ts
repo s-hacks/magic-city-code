@@ -1,8 +1,9 @@
 // The Express app and all routes. index.ts starts it; tests can build one without listening.
 import express, { type Request, type Response } from "express";
 import { z } from "zod";
-import { MissionSchema, type Proposal } from "@mcc/shared";
+import { challengeCoachInfo, MissionSchema, type Proposal } from "@mcc/shared";
 import { loadCity, neighborhoodList } from "./city";
+import { runChallengeCoach } from "./challengeCoach";
 import { runCoach } from "./coach";
 import type { CoachMission } from "./prompts/coach";
 import { aiEnabled } from "./config";
@@ -28,6 +29,24 @@ const CoachBody = z.object({
   lastError: z.string().max(4000).optional(),
   lastCoverage: z.number().min(0).max(1).optional(),
   question: z.string().max(1000).optional(),
+  hintsGiven: z.number().int().min(0).default(0),
+});
+
+const ChallengeCoachBody = z.object({
+  action: z.enum(["hint", "explain-failure", "review", "concept", "chat"]).default("chat"),
+  code: z.string().max(20000).default(""),
+  question: z.string().max(1000).optional(),
+  verdict: z
+    .object({
+      ok: z.boolean(),
+      title: z.string().max(300),
+      detail: z.string().max(2000),
+      line: z.number().int().min(0).optional(),
+      testName: z.string().max(200).optional(),
+    })
+    .optional(),
+  flood: z.boolean().optional(),
+  history: z.array(z.object({ role: z.enum(["student", "coach"]), text: z.string().max(4000) })).max(20).default([]),
   hintsGiven: z.number().int().min(0).default(0),
 });
 
@@ -153,6 +172,29 @@ export function createApp(store: Store) {
     const { missionId: _id, mission: _sent, ...coachReq } = body.data;
     const result = await runCoach(coachReq, mission, (chunk) => res.write(chunk), { signal: abort.signal });
     if (result.note) console.log(`[coach] ${result.source}: ${result.note}`);
+    res.end();
+  });
+
+  // --- Challenge coach (streamed plain text) ---------------------------------------------------
+  app.post("/api/challenges/:id/coach", async (req: Request, res: Response) => {
+    const info = challengeCoachInfo[req.params.id];
+    if (!info) return res.status(404).json({ error: "No challenge with that id." });
+    const body = ChallengeCoachBody.safeParse(req.body);
+    if (!body.success) return bad(res, body.error);
+
+    res.status(200);
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+
+    const abort = new AbortController();
+    res.on("close", () => {
+      if (!res.writableEnded) abort.abort();
+    });
+
+    const result = await runChallengeCoach(info, body.data, (chunk) => res.write(chunk), { signal: abort.signal });
+    if (result.note) console.log(`[challenge-coach] ${result.source}: ${result.note}`);
     res.end();
   });
 

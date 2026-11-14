@@ -3,3 +3,4 @@ export * from "./data";
 export * from "./mission";
 export * from "./engine";
 export * from "./api";
+export * from "./challenges";

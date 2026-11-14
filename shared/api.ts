@@ -36,6 +36,28 @@ export interface CoachRequest {
 }
 // POST /api/coach streams plain text (text/plain; chunked).
 
+/** One earlier turn in the challenge coach chat. */
+export interface ChallengeCoachTurn {
+  role: "student" | "coach";
+  text: string;
+}
+
+/** What the student asks the coach to do. "chat" = a free question. */
+export type ChallengeCoachAction = "hint" | "explain-failure" | "review" | "concept" | "chat";
+
+export interface ChallengeCoachRequest {
+  challengeId: string; // the server uses its own copy of the challenge (with the solution, for the leak guard)
+  action: ChallengeCoachAction;
+  code: string;
+  question?: string;
+  /** The test the student is looking at, if it has run. */
+  verdict?: { ok: boolean; title: string; detail: string; line?: number; testName?: string };
+  flood?: boolean;
+  history?: ChallengeCoachTurn[]; // the last few turns, oldest first
+  hintsGiven: number; // 0,1,2 -> nudge, idea, worked example
+}
+// POST /api/challenges/:id/coach streams plain text (text/plain; chunked).
+
 export interface Proposal {
   id: string;
   studentName: string; // first name or nickname only

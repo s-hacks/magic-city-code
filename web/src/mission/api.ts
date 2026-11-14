@@ -1,7 +1,7 @@
 // Talks to the Express server at /api. If the server is not reachable, falls back to the
 // static files in /data so the demo still works: seed missions, seed problems, and the
 // coach falls back to the hints written in the mission (handled in Coach.tsx).
-import type { CoachRequest, FormerStore, GenerateRequest, GenerateResponse, Mission, ProblemCard, Proposal, PublicMission } from "@mcc/shared";
+import type { ChallengeCoachRequest, CoachRequest, FormerStore, GenerateRequest, GenerateResponse, Mission, ProblemCard, Proposal, PublicMission } from "@mcc/shared";
 
 export interface MissionSummary {
   id: string;
@@ -100,11 +100,21 @@ export async function approveMission(id: string): Promise<Mission | null> {
 }
 
 /** Streams the coach's reply. Resolves with the full text; throws if the server is unreachable. */
-export async function streamCoach(req: CoachRequest, onText: (soFar: string) => void, signal?: AbortSignal): Promise<string> {
-  const res = await fetch("/api/coach", {
+export function streamCoach(req: CoachRequest, onText: (soFar: string) => void, signal?: AbortSignal): Promise<string> {
+  return streamText("/api/coach", req, onText, signal);
+}
+
+/** Streams the challenge coach's reply (Sparks beside the code-challenge editor). */
+export function streamChallengeCoach(req: ChallengeCoachRequest, onText: (soFar: string) => void, signal?: AbortSignal): Promise<string> {
+  const { challengeId, ...body } = req;
+  return streamText(`/api/challenges/${encodeURIComponent(challengeId)}/coach`, body, onText, signal);
+}
+
+async function streamText(url: string, body: unknown, onText: (soFar: string) => void, signal?: AbortSignal): Promise<string> {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(req),
+    body: JSON.stringify(body),
     signal,
   });
   if (!res.ok || !res.body) throw new Error(`coach ${res.status}`);

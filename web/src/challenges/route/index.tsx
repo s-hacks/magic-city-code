@@ -1,50 +1,10 @@
+import { routeCoachInfo } from '@mcc/shared';
 import type { Challenge } from '../types';
 import harness from './harness.py?raw';
 import { checkRoute, closedFor, key, type RouteData, type RouteTest } from './check';
 import { createRouteViz } from './viz';
 
-const starterCode = `import heapq
-
-def shortest_path(graph, start, goal):
-    """Return the shortest walking route from start to goal.
-
-    graph[corner] -> [(neighbor, meters), ...]
-    Return a list of corner ids: [start, ..., goal].
-    Return [] if the goal can't be reached.
-    """
-    # Tip: Dijkstra's algorithm with heapq.heappush / heapq.heappop
-    return [start]
-`;
-
-const solution = `import heapq
-
-def shortest_path(graph, start, goal):
-    best = {start: 0}
-    came_from = {}
-    heap = [(0, start)]
-    done = set()
-
-    while heap:
-        dist, corner = heapq.heappop(heap)
-        if corner in done:
-            continue
-        done.add(corner)
-        if corner == goal:
-            break
-        for neighbor, meters in graph[corner]:
-            new = dist + meters
-            if new < best.get(neighbor, float("inf")):
-                best[neighbor] = new
-                came_from[neighbor] = corner
-                heapq.heappush(heap, (new, neighbor))
-
-    if goal not in done:
-        return []
-    route = [goal]
-    while route[-1] != start:
-        route.append(came_from[route[-1]])
-    return route[::-1]
-`;
+const { starterCode, solution } = routeCoachInfo;
 
 export const routeChallenge: Challenge<RouteData, RouteTest> = {
   id: 'route-to-fresh-food',

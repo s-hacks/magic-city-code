@@ -65,6 +65,15 @@ describe("routes", () => {
     expect((await post("/api/coach", { missionId: "nope", levelIndex: 0, code: "", hintsGiven: 0 })).status).toBe(404);
   });
 
+  it("challenge coach streams a reply for a known challenge and 404s otherwise", async () => {
+    const ok = await post("/api/challenges/route-to-fresh-food/coach", { action: "hint", code: "", hintsGiven: 0 });
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get("content-type")).toMatch(/text\/plain/);
+    expect((await ok.text()).length).toBeGreaterThan(0);
+    expect((await post("/api/challenges/nope/coach", { action: "hint" })).status).toBe(404);
+    expect((await post("/api/challenges/route-to-fresh-food/coach", { action: "dance" })).status).toBe(400);
+  });
+
   it("stores proposals with thing and hubs, scrubbing code and summary", async () => {
     const res = await post("/api/proposals", {
       studentName: "Maya Smith",
