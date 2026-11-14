@@ -3,7 +3,14 @@
 import { z } from "zod";
 
 export const SiteKindSchema = z.enum(["church", "school", "library", "community_center"]);
-export const NeedColumnSchema = z.enum(["households", "households_no_car", "kids", "seniors"]);
+export const NeedColumnSchema = z.enum([
+  "households",
+  "households_no_car",
+  "kids",
+  "seniors",
+  "households_poverty",
+  "households_no_internet",
+]);
 
 export const GoalSchema = z.object({
   metric: z.literal("coverage"), // share of need within walkMinutes of food

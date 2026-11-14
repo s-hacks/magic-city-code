@@ -27,6 +27,8 @@ function area(id: string, lat: number, noCar: number, households: number, neighb
     households_no_car: noCar,
     kids: noCar * 2,
     seniors: 0,
+    households_poverty: 0,
+    households_no_internet: 0,
   };
 }
 

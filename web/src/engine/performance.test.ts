@@ -19,6 +19,8 @@ function bigCity(): CityData {
       households_no_car: 20 + (i % 7) * 10,
       kids: 100,
       seniors: 50,
+      households_poverty: 30,
+      households_no_internet: 20,
     });
   }
   const sites: CityData["sites"] = [];
