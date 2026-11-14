@@ -8,8 +8,8 @@ import { MapView } from "../map/MapView";
 import { TopBar } from "../app/TopBar";
 import { flaresFor } from "../app/flares";
 import { useApp } from "../mission/AppContext";
-import { approveMission, generateMission } from "../mission/api";
-import { NEED_LABEL } from "../mission/text";
+import { approveMission, generateMission, listMissionSummaries, type MissionSummary } from "../mission/api";
+import { needWords } from "../mission/text";
 
 const EXAMPLES: { text: string; hood: string }[] = [
   { text: "There's no grocery store near West End, and I don't have a car.", hood: "west-end" },
@@ -22,7 +22,7 @@ const EXAMPLES: { text: string; hood: string }[] = [
 type Phase =
   | { k: "form" }
   | { k: "loading" }
-  | { k: "error"; message: string }
+  | { k: "error"; message: string; seeds?: boolean }
   | { k: "unsupported"; reason: string }
   | { k: "preview"; mission: Mission; problem: ProblemCard; source: "ai" | "fallback" };
 
@@ -34,6 +34,7 @@ export function Report() {
   const [phase, setPhase] = useState<Phase>({ k: "form" });
   const [flareCard, setFlareCard] = useState<ProblemCard | null>(null);
   const [approving, setApproving] = useState(false);
+  const [seeds, setSeeds] = useState<MissionSummary[]>([]);
 
   const hoodName = (id: string | null) => data?.neighborhoods.find((n) => n.id === id)?.name ?? "Birmingham";
   const flares = useMemo(() => (data && flareCard ? flaresFor([flareCard], data.neighborhoods) : []), [data, flareCard]);
@@ -48,8 +49,16 @@ export function Report() {
         registerMission(res.mission);
         setPhase({ k: "preview", mission: res.mission, problem: res.problem, source: res.source });
       } else setPhase({ k: "unsupported", reason: res.reason });
-    } catch {
-      setPhase({ k: "error", message: "I couldn't reach the mission maker. You can still try one of the five ready-made missions on the home screen." });
+    } catch (e) {
+      const slow = (e as Error)?.name === "TimeoutError" || (e as Error)?.name === "AbortError";
+      listMissionSummaries().then(setSeeds);
+      setPhase({
+        k: "error",
+        seeds: true,
+        message: slow
+          ? "The mission maker is taking longer than usual. Sorry! You can wait and try again, or start with one of these ready-made missions."
+          : "I couldn't reach the mission maker right now. You can still start with one of these ready-made missions.",
+      });
     }
   }
 
@@ -87,7 +96,16 @@ export function Report() {
                 </button>
               ))}
             </div>
-            {phase.k === "error" && <p className="error-box" role="alert">{phase.message}</p>}
+            {phase.k === "error" && (
+              <div className="error-box" role="alert">
+                <p>{phase.message}</p>
+                <div className="seed-choices">
+                  {seeds.map((m) => (
+                    <button key={m.id} className="chip strong" onClick={() => nav(`/mission/${m.id}`)}>{m.title}</button>
+                  ))}
+                </div>
+              </div>
+            )}
             <button className="big-btn" disabled={!text.trim()} onClick={submit}>Make a mission</button>
           </>
         )}
@@ -117,7 +135,7 @@ export function Report() {
             <ul className="facts">
               <li><b>Neighborhood:</b> {hoodName(phase.mission.area.neighborhood)}</li>
               <li><b>Partner:</b> {phase.mission.partner}</li>
-              <li><b>Counts:</b> {NEED_LABEL[phase.mission.needColumn]} within a {phase.mission.walkMinutes}-minute walk</li>
+              <li><b>Counts:</b> {needWords(phase.mission).who} within a {phase.mission.walkMinutes}-minute walk</li>
             </ul>
             <ol className="level-list">
               {phase.mission.levels.map((l, i) => (

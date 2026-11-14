@@ -128,8 +128,10 @@ button.chip:hover:not(:disabled) { background: rgba(60, 76, 120, 0.9); }
 
 /* ---------- mission screen ---------- */
 .panel { position: absolute; z-index: 5; top: 70px; bottom: 64px; display: flex; flex-direction: column; overflow: hidden; }
-.panel.left { left: 16px; width: clamp(340px, 30vw, 460px); }
-.panel.right { right: 16px; width: clamp(420px, 38vw, 600px); }
+:root { --lw: clamp(340px, 30vw, 460px); --rw: clamp(440px, 38vw, 600px); }
+@media (max-width: 1440px) { :root { --lw: 340px; --rw: 440px; } }
+.panel.left { left: 16px; width: var(--lw); }
+.panel.right { right: 16px; width: var(--rw); }
 .panel-inner { display: flex; flex-direction: column; min-height: 0; height: 100%; padding: 14px 18px; gap: 8px; }
 .panel-head h2 { font-size: 28px; margin-bottom: 2px; }
 .panel-head .quote { font-size: 18px; margin: 0 0 2px; }
@@ -172,13 +174,13 @@ button.chip:hover:not(:disabled) { background: rgba(60, 76, 120, 0.9); }
 .out-ok { color: var(--go); font-weight: 600; }
 .py-loading { color: var(--gold); padding: 0 18px 10px; }
 
-.success { position: absolute; z-index: 9; top: 70px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 18px; width: min(400px, 30vw); min-width: 300px; text-align: center; border-color: var(--go); box-shadow: 0 0 40px rgba(61,220,151,0.35); animation: drop 0.6s ease-out; max-width: calc(100vw - 40px); }
+.success { position: absolute; z-index: 9; top: 70px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 18px; left: calc(var(--lw) + 28px); right: calc(var(--rw) + 28px); transform: none; text-align: center; border-color: var(--go); box-shadow: 0 0 40px rgba(61,220,151,0.35); animation: drop 0.6s ease-out; max-width: calc(100vw - 40px); }
 .success-text { font-size: 26px; font-weight: 700; color: var(--go); line-height: 1.2; }
 .success-actions { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; }
 .success .big-btn.small-btn { margin: 0; white-space: nowrap; }
 .success .ghost-btn { padding: 8px 14px; font-size: 17px; white-space: nowrap; }
 .success .icon-btn { position: absolute; top: 2px; right: 6px; }
-@keyframes drop { from { transform: translate(-50%, -20px); opacity: 0; } }
+@keyframes drop { from { transform: translateY(-20px); opacity: 0; } }
 
 /* ---------- proposal ---------- */
 .proposal-page { position: fixed; inset: 0; overflow-y: auto; background: radial-gradient(circle at 50% 10%, #17204a, var(--night)); }
@@ -214,3 +216,16 @@ button.chip:hover:not(:disabled) { background: rgba(60, 76, 120, 0.9); }
   .paper-grid { break-inside: avoid; }
   @page { margin: 16mm; }
 }
+
+/* compact left panel so the instructions show without scrolling at 1280x720 */
+.panel-head h2 { font-size: 24px; }
+.panel-head .quote { font-size: 16px; line-height: 1.3; }
+.partner { font-size: 14px; }
+.meter-box .mcc-meter svg { width: 210px; height: auto; }
+.meter-box .mcc-meter .big { font-size: 32px; }
+.meter-box .mcc-meter .families { font-size: 16px; }
+.panel-scroll h3 { font-size: 19px; margin: 4px 0; }
+.instructions { font-size: 16px; line-height: 1.4; margin-bottom: 6px; }
+.goal-line { font-size: 16px; margin-bottom: 6px; }
+.note-box { font-size: 14px; padding: 6px 10px; margin: 0 0 6px; }
+.seed-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }

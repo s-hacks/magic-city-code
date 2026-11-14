@@ -20,7 +20,7 @@ export interface CodePanelProps {
 
 export const CodePanel = (p: CodePanelProps) => (
   <div className="panel-inner">
-    <div className="panel-title">Your code <span className="muted small">Ctrl+Enter runs it</span></div>
+    <div className="panel-title">Your code <span className="muted small">⌘/Ctrl+Enter runs it</span></div>
     <div className="editor-wrap">
       <Editor value={p.code} onChange={p.onChange} highlightLine={p.highlightLine} errorLine={p.errorLine} onRun={p.onRun} />
     </div>

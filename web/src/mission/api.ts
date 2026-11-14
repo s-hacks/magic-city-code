@@ -1,7 +1,7 @@
 // Talks to the Express server at /api. If the server is not reachable, falls back to the
 // static files in /data so the demo still works: seed missions, seed problems, and the
 // coach falls back to the hints written in the mission (handled in Coach.tsx).
-import type { CoachRequest, FormerStore, GenerateRequest, GenerateResponse, Mission, ProblemCard, Proposal } from "@mcc/shared";
+import type { CoachRequest, FormerStore, GenerateRequest, GenerateResponse, Mission, ProblemCard, Proposal, PublicMission } from "@mcc/shared";
 
 export interface MissionSummary {
   id: string;
@@ -50,10 +50,25 @@ export async function listMissionSummaries(): Promise<MissionSummary[]> {
   }
 }
 
+/** Mission ids the server refused because no adult has approved them yet. */
+const pendingIds = new Set<string>();
+export const isPendingApproval = (id: string) => pendingIds.has(id);
+
+/** Copy of a mission with every level's solution removed: the only shape we send to the coach. */
+export function toPublicMission(m: Mission): PublicMission {
+  return { ...m, levels: m.levels.map(({ solution: _solution, ...rest }) => rest) };
+}
+
 export async function fetchMission(id: string): Promise<Mission | null> {
   const safe = encodeURIComponent(id);
   try {
-    return await getJson<Mission>(`/api/missions/${safe}`);
+    const res = await fetch(`/api/missions/${safe}`, { signal: AbortSignal.timeout(4000) });
+    if (res.status === 403) {
+      pendingIds.add(id);
+      return null;
+    }
+    if (!res.ok) throw new Error(String(res.status));
+    return (await res.json()) as Mission;
   } catch {
     return getJson<Mission>(`/data/missions/${safe}.json`).catch(() => null);
   }
@@ -66,6 +81,7 @@ export async function loadFormerStores(): Promise<FormerStore[]> {
 /** Throws when the server cannot be reached or says no. */
 export async function generateMission(req: GenerateRequest): Promise<GenerateResponse> {
   const res = await fetch("/api/missions/generate", {
+    signal: AbortSignal.timeout(30000),
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(req),

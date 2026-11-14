@@ -32,7 +32,10 @@ export function Home() {
     return flaresFor(problems, data.neighborhoods, labels);
   }, [data, problems, titles]);
 
-  const openProblem = (p: ProblemCard) => p.missionId && nav(`/mission/${p.missionId}`);
+  // Only missions an adult approved can be opened. (The seed index lists approved ones only.)
+  const approved = useMemo(() => new Set(missions.map((m) => m.id)), [missions]);
+  const canOpen = (p: ProblemCard) => !!p.missionId && approved.has(p.missionId);
+  const openProblem = (p?: ProblemCard) => p && canOpen(p) && nav(`/mission/${p.missionId}`);
   const hovered = problems.find((p) => p.id === hover);
 
   return (
@@ -43,7 +46,7 @@ export function Home() {
         flares={flares}
         dayMode={dayMode}
         cameraPadding={{ top: 90, bottom: 140, left: 460, right: 440 }}
-        onFlareClick={(f: Flare) => openProblem(problems.find((p) => p.id === f.id)!)}
+        onFlareClick={(f: Flare) => openProblem(problems.find((p) => p.id === f.id))}
         onFlareHover={(f) => setHover(f?.id ?? null)}
       />
       <TopBar hideBrand />
@@ -65,14 +68,14 @@ export function Home() {
               <li key={p.id}>
                 <button
                   className={`problem ${hover === p.id ? "hot" : ""}`}
-                  disabled={!p.missionId}
+                  disabled={!canOpen(p)}
                   onClick={() => openProblem(p)}
                   onMouseEnter={() => setHover(p.id)}
                   onMouseLeave={() => setHover(null)}
                 >
                   <span className="where">{hoodName(p.neighborhood)}</span>
                   <span className="said">“{p.text}”</span>
-                  <span className="tag">{p.missionId ? "Open mission →" : "Saved · no mission yet"}</span>
+                  <span className="tag">{canOpen(p) ? "Open mission →" : p.missionId ? "Waiting for an adult to approve" : "Saved · no mission yet"}</span>
                 </button>
               </li>
             ))}

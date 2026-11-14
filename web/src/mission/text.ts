@@ -14,6 +14,27 @@ export const NEED_LABEL: Record<NeedColumn, string> = {
   households_no_internet: "households with no home internet",
 };
 
+/** Plural of the mission's thing ("pickup hub" -> "pickup hubs"). */
+export const plural = (thing: string, n: number) => (n === 1 ? thing : `${thing}s`);
+
+/** Plain words for who is counted and what they are walking to. */
+export function needWords(m: Mission): { who: string; place: string } {
+  switch (m.needColumn) {
+    case "households_no_car":
+      return { who: "households with no car", place: "food" };
+    case "households_no_internet":
+      return { who: "households with no home internet", place: "free Wi-Fi" };
+    case "households_poverty":
+      return { who: "low-income households", place: "a warm place" };
+    case "seniors":
+      return { who: "seniors", place: "a warm place" };
+    case "kids":
+      return { who: "children", place: "food" };
+    default:
+      return { who: "households", place: "food" };
+  }
+}
+
 /** Short label for a flare over a neighborhood, from the problem words. */
 export function shortLabel(text: string, max = 24): string {
   const clean = text.replace(/\s+/g, " ").trim().replace(/[.!?]+$/, "");
@@ -38,12 +59,11 @@ export interface SummaryInput {
 
 /** Three sentences, built from the numbers. No AI involved. */
 export function makeSummary(s: SummaryInput): string {
-  const thing = s.mission.thing;
-  const who = NEED_LABEL[s.mission.needColumn];
-  const plural = s.hubs === 1 ? thing : `${thing}s`;
+  const { who, place } = needWords(s.mission);
+  const things = plural(s.mission.thing, s.hubs);
   return [
-    `I wrote Python that chose ${s.hubs} ${plural} for ${s.neighborhoodName}.`,
-    `Before, ${pct(s.before)} of ${who} were within a ${s.mission.walkMinutes}-minute walk of food; with my ${plural}, ${pct(s.after)} are, which is about ${num(s.helped)} more ${who}.`,
+    `I wrote Python that chose ${s.hubs} ${things} for ${s.neighborhoodName}.`,
+    `Before, ${pct(s.before)} of ${who} were within a ${s.mission.walkMinutes}-minute walk of ${place}; with my ${things}, ${pct(s.after)} are, which is about ${num(s.helped)} more ${who}.`,
     `I hope ${s.mission.partner} can look at these places and decide if they are worth a closer look.`,
   ].join(" ");
 }

@@ -8,7 +8,7 @@ import { TopBar } from "../app/TopBar";
 import { useApp } from "../mission/AppContext";
 import { fetchProposal, saveProposal } from "../mission/api";
 import { getLocalProposals, getSnapshot, saveLocalProposal } from "../mission/storage";
-import { makeSummary, NEED_LABEL, num, pct } from "../mission/text";
+import { makeSummary, needWords, num, pct, plural } from "../mission/text";
 
 const LABEL = "A student proposal based on public data. A starting point for discussion, not an engineering study.";
 
@@ -40,7 +40,7 @@ export function ProposalPage() {
           mission: draft.mission,
           hoodName: draft.neighborhoodName,
           hubs: draft.hubs,
-          proposal: { studentName: "", missionId: draft.mission.id, missionTitle: draft.mission.title, partner: draft.mission.partner, neighborhood: draft.neighborhoodName, levelIndex: draft.levelIndex, code: draft.code, before: draft.before, after: draft.after, helped: draft.helped, summary },
+          proposal: { studentName: "", missionId: draft.mission.id, missionTitle: draft.mission.title, partner: draft.mission.partner, neighborhood: draft.neighborhoodName, levelIndex: draft.levelIndex, code: draft.code, thing: draft.thing, hubs: draft.hubs, before: draft.before, after: draft.after, helped: draft.helped, summary },
         });
         return;
       }
@@ -50,7 +50,7 @@ export function ProposalPage() {
       const m = await getMission(p.missionId);
       if (!live) return;
       setSaved(p);
-      setView({ proposal: p, mission: m, hoodName: p.neighborhood, hubs: Number(/chose (\d+)/.exec(p.summary)?.[1] ?? (p.code.match(/place_hub/g) ?? []).length) });
+      setView({ proposal: p, mission: m, hoodName: p.neighborhood, hubs: p.hubs ?? 0 });
     })();
     return () => {
       live = false;
@@ -95,8 +95,8 @@ export function ProposalPage() {
   if (!view) return <div className="screen plain"><TopBar /></div>;
 
   const { proposal: p, mission } = view;
-  const who = mission ? NEED_LABEL[mission.needColumn] : "households";
-  const unit = who;
+  const words = mission ? needWords(mission) : { who: "households", place: "food" };
+  const thing = p.thing ?? mission?.thing ?? "hub";
 
   return (
     <div className="proposal-page">
@@ -129,11 +129,11 @@ export function ProposalPage() {
           <div className="paper-grid">
             <div>
               <div className="stat-row">
-                <div className="stat"><div className="n">{pct(p.before)}</div><div className="l">within a walk of food before</div></div>
+                <div className="stat"><div className="n">{pct(p.before)}</div><div className="l">within a walk of {words.place} before</div></div>
                 <div className="arrow" aria-hidden="true">→</div>
-                <div className="stat good"><div className="n">{pct(p.after)}</div><div className="l">after my {view.hubs} {view.hubs === 1 ? "hub" : "hubs"}</div></div>
+                <div className="stat good"><div className="n">{pct(p.after)}</div><div className="l">after my {view.hubs} {plural(thing, view.hubs)}</div></div>
               </div>
-              <div className="helped">About <b>{num(p.helped)}</b> more {unit} within a {mission?.walkMinutes ?? 10}-minute walk (straight-line estimate).</div>
+              <div className="helped">About <b>{num(p.helped)}</b> more {words.who} within a {mission?.walkMinutes ?? 10}-minute walk (straight-line estimate).</div>
             </div>
             {snapshot && <img className="snap" src={snapshot} alt={`Map of ${p.neighborhood} after the student's plan`} />}
           </div>
