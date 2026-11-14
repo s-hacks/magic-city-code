@@ -1,12 +1,23 @@
-/* Landing — same tokens as the app (src/theme.ts, "Magic City After Dark"). Resets are scoped to .lp so they do not leak into the app screens. */
+/* Landing — its own page (landing.html). Same color tokens as the app (src/theme.ts, "Magic City After Dark"); the rest of the look is here. */
 :root {
-  /* Colors come from src/theme.ts (applyCssVars + index.css). Only landing-only tokens live here. */
+  /* Colors come from src/theme.ts (applyCssVars in main.tsx). Only landing-only tokens live here. */
   --accent-2: #FFE29A; /* hot core of gold — only for glows/gradients next to --accent */
+  --sans: 'Space Grotesk', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --r: 18px;
+  --ease: cubic-bezier(.2, .8, .2, 1);
   --spring: cubic-bezier(.34, 1.56, .64, 1);
   --top: 76px;   /* top bar height — stages pad by this */
   --dock: 96px;  /* bottom dock zone — stages pad by this */
   --gut: clamp(16px, 4vw, 56px);
+  color-scheme: dark;
 }
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); font: 16px/1.5 var(--sans); -webkit-font-smoothing: antialiased; overflow: hidden; }
+button, input, textarea, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
 
 .lp h1, .lp h2, .lp h3 { margin: 0; letter-spacing: -0.025em; line-height: 1.05; }
 .lp p { margin: 0; }
