@@ -1,3 +1,4 @@
+// Checks the coach's fallback hint, the solution leak guard, and the Claude call (with a fake client).
 import { describe, expect, it } from "vitest";
 import { createLeakGuard, fallbackHint, runCoach } from "../src/coach";
 import { coachUserMessage, levelContext, COACH_RULES } from "../src/prompts/coach";
