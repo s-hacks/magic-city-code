@@ -3,7 +3,7 @@ import * as maplibregl from 'maplibre-gl';
 import type { GeoJSONSource, Map as MLMap } from 'maplibre-gl';
 import type { Feature, FeatureCollection, Polygon } from 'geojson';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { makeStyle, type LayerGroup } from './style';
+import { applyTheme, makeStyle, type LayerGroup } from './style';
 import type { ThemeName } from '../theme';
 import {
   BIRMINGHAM, baseline, distM, litSet, mission, neighborhoods, offset, residents, shelters, sites, stores,
@@ -114,12 +114,7 @@ export default function MapView({ theme, screen, hidden, problems, hubs, runId, 
 
   // --- theme --------------------------------------------------------------
   useEffect(() => {
-    ready.current?.then((m) => {
-      const s = makeStyle(theme);
-      for (const l of s.layers) for (const [k, v] of Object.entries((l as { paint?: object }).paint ?? {})) m.setPaintProperty(l.id, k as never, v as never);
-      m.setSky(s.sky!);
-      m.setLight(s.light!);
-    });
+    ready.current?.then((m) => applyTheme(m, theme));
   }, [theme]);
 
   // --- layer toggles (+ compare hides hubs) --------------------------------
@@ -150,11 +145,11 @@ export default function MapView({ theme, screen, hidden, problems, hubs, runId, 
     const markers: maplibregl.Marker[] = [];
     ready.current?.then((m) => {
       problems.forEach((p, i) => {
-        const root = el('button', `flare${p.missionId ? ' has-mission' : ''}`);
+        const root = el('button', `flare${p.missionId || p.challengeId ? ' has-mission' : ''}`);
         root.style.setProperty('--delay', `${2.2 + i * 0.18}s`);
         root.setAttribute('aria-label', `${p.label}, ${p.neighborhood}`);
         const card = el('div', 'flare-card');
-        card.append(el('div', 'flare-hood', p.neighborhood), el('div', 'flare-quote', `“${p.quote}”`), el('div', 'flare-cta', p.missionId ? 'Open mission →' : 'Mission in the works'));
+        card.append(el('div', 'flare-hood', p.neighborhood), el('div', 'flare-quote', `“${p.quote}”`), el('div', 'flare-cta', p.challengeId ? 'Open challenge →' : p.missionId ? 'Open mission →' : 'Mission in the works'));
         root.append(el('span', 'flare-beam'), el('span', 'flare-dot'), el('span', 'flare-label', p.label), card);
         root.addEventListener('click', () => cb.current.onFlare(p));
         markers.push(new maplibregl.Marker({ element: root, anchor: 'bottom' }).setLngLat(p.at).addTo(m));

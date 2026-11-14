@@ -1,55 +1,70 @@
 // One source of truth for color: CSS variables and the map style both read from here.
-// Concept: graphite neutrals + ONE molten accent (Birmingham's iron & steel, the Vulcan forge).
-// Everything "lit" (residents reached, hubs, meter, Run) is molten; everything else stays ash.
+// Palette "Magic City After Dark": deep indigo night, a violet → blue → cyan brand gradient,
+// and three signal colors with fixed meaning everywhere:
+//   blue/cyan = explored by your code · gold = your route / lit · orange = problems & floods.
 
 export type ThemeName = 'night' | 'day';
 
 export const themes = {
   night: {
-    bg: '#09090B',
-    surface: '#141418',
-    raised: '#1D1D23',
-    line: '#2A2A32',
-    ash: '#5C5C66', // unreached residents, quiet UI
-    muted: '#9A9AA5',
-    text: '#EDEDF0',
-    accent: '#FF5A1F', // molten iron
-    accentInk: '#140600', // text on accent
-    // map-only
-    land: '#0C0C0F',
-    water: '#030304',
-    park: '#101013',
-    road: '#26262D',
-    roadMajor: '#3A3A44',
-    buildingLow: '#16161B',
-    buildingHigh: '#3B3B46',
-    sky: '#050506',
-    horizon: '#3D1406', // furnace glow on the horizon
-    store: '#F4F4F6',
-    glass: 'rgba(20, 20, 24, 0.72)',
+    bg: '#070A1C',
+    surface: '#0D1230',
+    raised: '#161D47',
+    line: '#262F6B',
+    ash: '#4B5590', // unreached / quiet UI
+    muted: '#9CA5DB',
+    text: '#F0F2FF',
+    accent: '#FFC53D', // gold: route, lit, success moments
+    accentInk: '#1C1300',
+    blue: '#4D7CFF',
+    cyan: '#3EE6FF',
+    violet: '#9B6BFF',
+    pink: '#FF5CAA',
+    orange: '#FF7A2F',
+    red: '#FF4D6A',
+    green: '#2EE6A6',
+    // map
+    land: '#0A0E2A',
+    water: '#123E8C',
+    park: '#0E3A3A',
+    road: '#1F2A66',
+    roadMajor: '#3B3FA6',
+    buildingLow: '#151B4A',
+    buildingHigh: '#6A45C9',
+    sky: '#060818',
+    horizon: '#5A1E78', // violet-magenta dusk on the horizon
+    store: '#F0F2FF',
+    glass: 'rgba(13, 18, 48, 0.74)',
   },
   day: {
-    // Projector fallback (D key): same accent, light neutrals.
-    bg: '#E9E9EC',
-    surface: '#F7F7F8',
-    raised: '#FFFFFF',
-    line: '#D3D3D9',
-    ash: '#8A8A94',
-    muted: '#55555F',
-    text: '#111114',
-    accent: '#F04E0F',
+    // Projector fallback (D key): same signal colors on light, cool neutrals.
+    bg: '#EEF0FA',
+    surface: '#FFFFFF',
+    raised: '#F3F4FB',
+    line: '#D5D9F0',
+    ash: '#8C93BC',
+    muted: '#4E5582',
+    text: '#0E1230',
+    accent: '#E8A200',
     accentInk: '#FFFFFF',
-    land: '#E4E4E8',
-    water: '#C9CBD2',
-    park: '#DCDDE1',
+    blue: '#2F5BEA',
+    cyan: '#0096C7',
+    violet: '#6D3FE0',
+    pink: '#D93A86',
+    orange: '#F05A0A',
+    red: '#E02D4F',
+    green: '#0FA875',
+    land: '#E9ECF8',
+    water: '#A9C4F5',
+    park: '#C9E9DF',
     road: '#FFFFFF',
-    roadMajor: '#F7F7F8',
-    buildingLow: '#D6D6DC',
-    buildingHigh: '#B4B4BE',
-    sky: '#DADBE0',
-    horizon: '#F6E3D9',
-    store: '#111114',
-    glass: 'rgba(247, 247, 248, 0.8)',
+    roadMajor: '#DCD6FF',
+    buildingLow: '#DADDF0',
+    buildingHigh: '#B9A8F0',
+    sky: '#DDE3FA',
+    horizon: '#F6D9EC',
+    store: '#0E1230',
+    glass: 'rgba(255, 255, 255, 0.82)',
   },
 } as const;
 

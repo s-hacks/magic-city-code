@@ -22,6 +22,7 @@ export interface Problem {
   neighborhood: string;
   at: LngLat;
   missionId?: string; // only problems with a playable mission
+  challengeId?: string;
 }
 
 export interface Level {
@@ -63,6 +64,7 @@ export const neighborhoods: Place[] = [
 // Drawn from reports/Birmingham Alabama city problems.md
 export const problems: Problem[] = [
   { id: 'food', label: 'No grocery store', quote: 'The closest real grocery store is two bus rides away. We buy dinner at the gas station.', neighborhood: 'West End', at: [-86.8565, 33.4985], missionId: 'feed-the-block' },
+  { id: 'walk', label: 'Long walk to groceries', quote: 'Two grocery stores for all of downtown and Woodlawn. My kids walk past three gas stations to get to one.', neighborhood: 'Woodlawn', at: [-86.7650, 33.5300], challengeId: 'route-to-fresh-food' },
   { id: 'shelter', label: 'Not enough shelter beds', quote: 'On cold nights every bed downtown is full by 6 pm.', neighborhood: 'Downtown', at: [-86.8075, 33.5175] },
   { id: 'bus', label: 'Bus is always late', quote: 'I leave an hour early for a 20-minute ride because the bus might not come.', neighborhood: 'Ensley', at: [-86.8870, 33.5170] },
   { id: 'strays', label: 'Stray dog packs', quote: 'Kids can’t walk to the bus stop because of the dogs.', neighborhood: 'Woodlawn', at: [-86.7520, 33.5390] },

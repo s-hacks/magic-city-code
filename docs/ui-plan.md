@@ -102,19 +102,20 @@ If the code has an error, the map does not change. The bad line gets a red under
 
 ## 10. Look and feel
 
-Palette concept: graphite neutrals plus **one** bold accent, molten iron. Anything that is lit (reached residents, hubs, the meter, Run) is molten. Everything else stays ash-gray. Tokens live in `web/src/theme.ts` and drive both the CSS and the map style.
+Palette "Magic City After Dark": a deep indigo night, a violet → blue → cyan brand gradient (logo, headline, primary buttons), and signal colors that mean the same thing everywhere. Tokens live in `web/src/theme.ts` and drive both the CSS and the map style.
 
-| Token | Night | Used for |
+| Token | Night | Meaning |
 |---|---|---|
-| bg / land | `#09090B` / `#0C0C0F` | Page and map ground |
-| surface / raised | `#141418` / `#1D1D23` | Panels, unlit meter bars |
-| ash | `#5C5C66` | Residents far from food, quiet UI |
-| muted | `#9A9AA5` | Secondary text |
-| text | `#EDEDF0` | Text, existing stores, shelters |
-| **accent (molten)** | `#FF5A1F` | Residents in reach, hubs, rings, meter, Run, errors (always with an icon and words) |
-| horizon | `#3D1406` | Furnace glow on the map horizon |
+| bg / surface / raised | `#070A1C` / `#0D1230` / `#161D47` | Page, panels, controls |
+| violet → blue → cyan | `#9B6BFF` → `#4D7CFF` → `#3EE6FF` | Brand gradient; blue/cyan = explored by your code |
+| gold (accent) | `#FFC53D` | Your route, lit residents, success moments |
+| orange | `#FF7A2F` | Problems, floods, repeated work |
+| red | `#FF4D6A` | Errors, failed checks |
+| green | `#2EE6A6` | Passed tests, Submit, grocery stores (fresh food) |
+| pink | `#FF5CAA` | Strings in code |
+| map | water `#123E8C`, parks `#0E3A3A`, roads `#1F2A66`, motorways violet, buildings indigo → violet by height, violet horizon | Colorful but dark, so the signal colors stay on top |
 
-The day theme (`D` key) keeps the same accent on light neutrals.
+The day theme (`D` key) keeps the same signal colors on light neutrals.
 
 - **Type:** a clean geometric font for the interface (Space Grotesk) and a clear monospace for code (JetBrains Mono).
 - **Sizes for a projector:** body text 18 px, code 20 px, the score 40 px.

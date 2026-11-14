@@ -3,6 +3,8 @@ import MapView, { HUB_STEP_MS, RUN_START_MS } from './map/MapView';
 import type { LayerGroup } from './map/style';
 import Home from './pages/Home';
 import Mission, { type RunState } from './pages/Mission';
+import ChallengePage from './pages/Challenge';
+import { challenges } from './challenges';
 import type { EditorHandle } from './code/Editor';
 import { applyCssVars, type ThemeName } from './theme';
 import { baseline, fakeRun, litSet, mission, problems as seedProblems, residents, type Problem, type Site } from './data/mock';
@@ -11,7 +13,7 @@ const RESULT_AT_MS = 2400; // when the meter fills, after the last ring has ripp
 
 export default function App() {
   const [theme, setTheme] = useState<ThemeName>('night');
-  const [screen, setScreen] = useState<'home' | 'mission'>('home');
+  const [screen, setScreen] = useState<'home' | 'mission' | 'challenge'>('home');
   const [problems, setProblems] = useState<Problem[]>(seedProblems);
   const [hidden, setHidden] = useState<Set<LayerGroup>>(new Set());
   const [compare, setCompare] = useState(false);
@@ -101,6 +103,8 @@ export default function App() {
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
   });
 
+  const open = (p: Problem) => (p.challengeId ? setScreen('challenge') : p.missionId && setScreen('mission'));
+
   const toggle = (g: LayerGroup) => setHidden((h) => {
     const n = new Set(h);
     if (n.has(g)) n.delete(g); else n.add(g);
@@ -109,21 +113,24 @@ export default function App() {
 
   return (
     <div className="app" data-screen={screen}>
-      <MapView
+      {screen !== 'challenge' && <MapView
         theme={theme} screen={screen} hidden={hidden} problems={problems}
         hubs={hubs} runId={runId} compare={compare}
-        onFlare={(p) => p.missionId && setScreen('mission')}
+        onFlare={open}
         onSiteClick={(s) => editor.current?.insert(`city.site("${s.name}")`)}
-      />
+      />}
       <div className="vignette" aria-hidden />
       {run.goal && <div key={runId} className="wave" aria-hidden />}
 
       {screen === 'home' && (
         <Home
           problems={problems}
-          onOpen={(p) => p.missionId && setScreen('mission')}
+          onOpen={open}
           onReport={(p) => setProblems((ps) => [...ps, p])}
         />
+      )}
+      {screen === 'challenge' && (
+        <ChallengePage ch={challenges['route-to-fresh-food']} theme={theme} onHome={() => setScreen('home')} onTheme={() => setTheme((t) => (t === 'night' ? 'day' : 'night'))} />
       )}
       {screen === 'mission' && (
         <Mission

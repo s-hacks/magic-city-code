@@ -1,4 +1,4 @@
-import type { StyleSpecification, LayerSpecification, ExpressionSpecification, GeoJSONSourceSpecification } from 'maplibre-gl';
+import type { Map as MLMap, StyleSpecification, LayerSpecification, ExpressionSpecification, GeoJSONSourceSpecification } from 'maplibre-gl';
 import { themes, type ThemeName } from '../theme';
 
 // Layer groups drive the layer toggles: every layer carries metadata.group.
@@ -53,7 +53,7 @@ export function makeStyle(name: ThemeName): StyleSpecification {
       g('streets', { id: 'road-motorway', type: 'line', source: 'omt', 'source-layer': 'transportation',
         filter: ['==', ['get', 'class'], 'motorway'],
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': t.roadMajor, 'line-width': zoomed(1, 12) } }),
+        paint: { 'line-color': t.violet, 'line-opacity': 0.55, 'line-width': zoomed(1, 12) } }),
       g('streets', { id: 'rail', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 12,
         filter: ['==', ['get', 'class'], 'rail'],
         paint: { 'line-color': t.road, 'line-width': 1, 'line-dasharray': [3, 3] } }),
@@ -109,4 +109,12 @@ export function makeStyle(name: ThemeName): StyleSpecification {
         paint: { 'fill-extrusion-color': t.accent, 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-opacity': 0.9 } }),
     ],
   };
+}
+
+/** Re-color a live map (theme switch) without rebuilding sources or custom layers. */
+export function applyTheme(m: MLMap, name: ThemeName) {
+  const s = makeStyle(name);
+  for (const l of s.layers) for (const [k, v] of Object.entries((l as { paint?: object }).paint ?? {})) m.setPaintProperty(l.id, k as never, v as never);
+  m.setSky(s.sky!);
+  m.setLight(s.light!);
 }

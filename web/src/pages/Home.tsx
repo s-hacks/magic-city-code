@@ -5,7 +5,7 @@ import { Mark } from './Mission';
 export default function Home({ problems, onOpen, onReport }: { problems: Problem[]; onOpen: (p: Problem) => void; onReport: (p: Problem) => void }) {
   const [reporting, setReporting] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
-  const playable = problems.filter((p) => p.missionId);
+  const playable = problems.filter((p) => p.missionId || p.challengeId).sort((a, b) => Number(!!b.challengeId) - Number(!!a.challengeId));
 
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -32,8 +32,8 @@ export default function Home({ problems, onOpen, onReport }: { problems: Problem
         <p className="lede">Every dot is a family. Every flare is a real problem a neighbor told us about. Pick one, write a little Python, and watch your neighborhood glow.</p>
         <div className="hero-actions">
           {playable.map((p) => (
-            <button key={p.id} className="btn primary big" onClick={() => onOpen(p)}>
-              Start: {p.label} in {p.neighborhood} <span aria-hidden>→</span>
+            <button key={p.id} className={`btn big ${p.challengeId ? 'primary' : 'ghost'}`} onClick={() => onOpen(p)}>
+              {p.challengeId ? 'Code challenge' : 'Mission'}: {p.label} <span aria-hidden>→</span>
             </button>
           ))}
         </div>
