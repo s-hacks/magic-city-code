@@ -1,7 +1,8 @@
 // Real-world colors for the base map, shared by the mission/home map (mapStyle.ts) and the
 // code-challenge map (style.ts). Day reads like a familiar street map: blue water, green
-// parks and woods, tinted land use (homes, shops, industry, schools, hospitals), yellow and
-// orange main roads, warm buildings that turn glassy blue as they get taller. Night is the
+// parks and woods, tinted land use (homes, shops, industry, schools, hospitals), slate-blue
+// highways and white main roads (kept out of the signal colors), warm buildings that turn
+// glassy blue as they get taller. Night is the
 // same city after dark: deep blue water, dark greens, violet-tinted districts and indigo
 // roads, so the gold, green and orange signal lights on top still stand out.
 // All layers here read OpenMapTiles vector tiles (OpenFreeMap).
@@ -48,7 +49,7 @@ const DAY: World = {
   residential: "#ECE6DF",
   commercial: "#F8E6DE",
   industrial: "#E6E1EE",
-  school: "#FBEFC8",
+  school: "#F4EFDA",
   hospital: "#F8DADF",
   cemetery: "#D5E6CE",
   sports: "#C6E8C0",
@@ -60,20 +61,20 @@ const DAY: World = {
   wetland: "#C6E5DF",
   water: "#94C6F0",
   waterway: "#7FB6E6",
-  motorway: "#F5A24F",
-  trunk: "#F9C46B",
-  primary: "#FCD87F",
-  secondary: "#FFEDA6",
+  motorway: "#93A6D3", // slate blue: highways stay clear of the gold route and orange floods
+  trunk: "#B5C2E2",
+  primary: "#FFFFFF",
+  secondary: "#FFFFFF",
   tertiary: "#FFFFFF",
   minor: "#FFFFFF",
   path: "#E2D3BE",
-  casing: "#D6CEC3",
+  casing: "#C4C9D8",
   rail: "#ADA6A0",
-  buildingLow: "#E3DBD1",
+  buildingLow: "#DED9D2",
   buildingMid: "#D3C8BB",
   buildingHigh: "#AFBFD6",
   buildingOpacity: 0.9,
-  label: "#585C69",
+  label: "#3D4155",
   labelHalo: "#FFFFFF",
   labelOpacity: 0.9,
 };

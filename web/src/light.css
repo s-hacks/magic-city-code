@@ -1,0 +1,108 @@
+/* Light mode (D key) contrast pass. Loaded after index.css and styles.css; every rule is
+   scoped to the day theme so night is unchanged. Goals: solid white panels with visible
+   edges, dark readable text, buttons that look like buttons (and disabled ones that
+   clearly look off), and signal colors dark enough to read on white. Colors still come
+   from src/theme.ts. */
+
+:root[data-theme='day'] {
+  --shadow: 0 1px 2px rgba(10, 13, 36, .06), 0 10px 28px -14px rgba(10, 13, 36, .22);
+  --amber-ink: #8A5600; /* gold as text: the fill gold is too light to read on white */
+}
+:root[data-theme='day'] body { background: var(--bg); color: var(--text); }
+:root[data-theme='day'] :focus-visible { outline-color: var(--violet); }
+:root[data-theme='day'] a:not(.btn):not(.brand) { color: var(--blue); }
+
+/* ---------- surfaces ---------- */
+:root[data-theme='day'] .glass,
+:root[data-theme='day'] .card,
+:root[data-theme='day'] .cmap {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+:root[data-theme='day'] .challenge,
+:root[data-theme='day'] .hub {
+  background: var(--bg);
+}
+:root[data-theme='day'] .vignette { opacity: .25; }
+
+/* ---------- text ---------- */
+:root[data-theme='day'] .eyebrow,
+:root[data-theme='day'] .goal-label,
+:root[data-theme='day'] .desc h4 { color: var(--muted); font-weight: 700; }
+:root[data-theme='day'] .goal strong,
+:root[data-theme='day'] .compare-plans b,
+:root[data-theme='day'] .sparks .who,
+:root[data-theme='day'] .link-btn:not(.quiet) { color: var(--amber-ink); }
+:root[data-theme='day'] .quote { border-left-color: var(--accent); }
+:root[data-theme='day'] code,
+:root[data-theme='day'] .desc code { background: var(--raised); color: var(--cyan); border: 1px solid var(--line); }
+
+/* ---------- buttons ---------- */
+:root[data-theme='day'] .btn.primary { background: linear-gradient(100deg, var(--violet), var(--blue)); color: #fff; }
+:root[data-theme='day'] .btn.ghost,
+:root[data-theme='day'] .pill,
+:root[data-theme='day'] .icon-btn {
+  background: var(--surface); color: var(--text); border: 1px solid var(--line);
+}
+:root[data-theme='day'] .btn.ghost:hover,
+:root[data-theme='day'] .btn.ghost[aria-pressed='true'],
+:root[data-theme='day'] .icon-btn:hover { background: var(--raised); border-color: var(--ash); }
+:root[data-theme='day'] .pill[aria-current='true'] { background: var(--text); color: var(--surface); border-color: var(--text); }
+:root[data-theme='day'] .btn.submit { background: var(--green); color: #fff; }
+:root[data-theme='day'] .btn:disabled,
+:root[data-theme='day'] .pill:disabled {
+  opacity: 1; background: var(--raised); color: var(--ash); border: 1px solid var(--line); box-shadow: none;
+}
+:root[data-theme='day'] .chip-btn {
+  background: var(--surface); color: var(--text); border: 1px solid var(--line);
+}
+:root[data-theme='day'] .chip-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--violet) 10%, var(--surface)); border-color: var(--violet); }
+:root[data-theme='day'] .chip-btn:disabled { opacity: 1; color: var(--ash); background: var(--raised); }
+
+/* ---------- inputs ---------- */
+:root[data-theme='day'] input,
+:root[data-theme='day'] textarea,
+:root[data-theme='day'] select { background: var(--surface); color: var(--text); border-color: var(--line); }
+:root[data-theme='day'] input::placeholder,
+:root[data-theme='day'] textarea::placeholder { color: var(--ash); opacity: 1; }
+
+/* ---------- tags, badges, tabs ---------- */
+:root[data-theme='day'] .tag { color: var(--violet); background: color-mix(in srgb, var(--violet) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--violet) 30%, var(--line)); }
+:root[data-theme='day'] .diff { border: 1px solid currentColor; }
+:root[data-theme='day'] .diff.easy { color: var(--green); background: color-mix(in srgb, var(--green) 10%, var(--surface)); }
+:root[data-theme='day'] .diff.medium { color: var(--amber-ink); background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+:root[data-theme='day'] .diff.hard { color: var(--red); background: color-mix(in srgb, var(--red) 9%, var(--surface)); }
+:root[data-theme='day'] .test-tab { background: var(--surface); border-color: var(--line); color: var(--text); }
+:root[data-theme='day'] .test-tab[aria-selected='true'] { background: var(--raised); border-color: var(--violet); }
+:root[data-theme='day'] .verdict { background: var(--raised); border: 1px solid var(--line); border-left-width: 4px; }
+:root[data-theme='day'] .legend .chip { color: var(--text); }
+:root[data-theme='day'] .legend .chip[aria-pressed='false'] { color: var(--ash); }
+:root[data-theme='day'] .skill-filter .chip { background: var(--surface); }
+:root[data-theme='day'] .skill-filter .chip[aria-pressed='true'] { background: var(--text); color: var(--surface); }
+
+/* ---------- map overlays ---------- */
+:root[data-theme='day'] .map-legend,
+:root[data-theme='day'] .flood-toggle,
+:root[data-theme='day'] .timeline,
+:root[data-theme='day'] .legend {
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); backdrop-filter: none;
+}
+:root[data-theme='day'] .flare-card,
+:root[data-theme='day'] .mcc-tooltip { background: var(--surface); color: var(--text); border: 1px solid var(--line); box-shadow: var(--shadow); }
+:root[data-theme='day'] .maplibregl-ctrl-group { border: 1px solid var(--line); box-shadow: var(--shadow); }
+
+/* ---------- Sparks coach (challenge screen) ---------- */
+:root[data-theme='day'] .agent-dock { border-top: 1px solid var(--line); background: color-mix(in srgb, var(--violet) 4%, var(--surface)); }
+:root[data-theme='day'] .agent-peek,
+:root[data-theme='day'] .agent-empty { color: var(--muted); }
+:root[data-theme='day'] .agent-msg.coach { background: var(--surface); border: 1px solid var(--line); }
+:root[data-theme='day'] .agent-msg.student { background: color-mix(in srgb, var(--violet) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--violet) 25%, var(--line)); }
+:root[data-theme='day'] .agent-msg code { background: var(--raised); }
+
+/* ---------- mission screen ---------- */
+:root[data-theme='day'] .sparks { background: color-mix(in srgb, var(--accent) 9%, var(--surface)); border-top: 1px solid var(--line); }
+:root[data-theme='day'] .output { border-top-color: var(--line); }
+:root[data-theme='day'] .actions { border-top-color: var(--line); }
+:root[data-theme='day'] .skyline span:not(.target):not(.on) { background: var(--line); }
