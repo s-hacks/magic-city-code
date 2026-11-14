@@ -1,3 +1,4 @@
+// Route to Fresh Food: registers the challenge (title, starter code, solution, hidden tests) so it shows up in the Practice list.
 import { routeCoachInfo } from '@mcc/shared';
 import type { Challenge } from '../types';
 import harness from './harness.py?raw';

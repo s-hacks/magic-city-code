@@ -1,3 +1,4 @@
+// Landing page, "Data" stage: animated numbers and the problem list, all taken from the sourced facts in facts.ts.
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import { Arrow, type StageProps } from '../Landing';
 import { city, homelessCounts, problems } from '../facts';

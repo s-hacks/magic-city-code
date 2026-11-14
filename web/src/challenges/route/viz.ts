@@ -1,3 +1,4 @@
+// Route to Fresh Food: draws the student's path, the closed streets and the expected path on the map after a run.
 import * as maplibregl from 'maplibre-gl';
 import type { GeoJSONSource, Map as MLMap } from 'maplibre-gl';
 import type { Feature, LineString } from 'geojson';

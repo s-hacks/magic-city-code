@@ -138,3 +138,42 @@ Each entry gives the choice, what was rejected, and the reason. If the reason is
 ### Demo reset
 - **Chosen:** `/?reset=1` clears the browser's saved state. `POST /api/admin/reset` (localhost only) resets the server.
 - **Reason:** the server README says a reset before a demo must remove runtime problems, missions and proposals.
+
+---
+
+## UI and challenges
+
+### One color source, `theme.ts`
+- **Chosen:** all colors come from `web/src/theme.ts`. The map lights and the base map derive from it. `index.css` is copied from the prototype as is.
+- **Rejected:** colors set separately in CSS, the map and the landing page.
+- **Reason:** `docs/ui-integration.md`. The next prototype drop only needs two files copied. Signal colors: gold is lit or a hub, green is a grocery store, orange is a problem, red is an error.
+
+### Bring over the look, not the prototype's code
+- **Chosen:** port the prototype's theme, stylesheet, landing page and markup. Keep the real engine, Python runner, data and server.
+- **Rejected:** replacing the app with the prototype.
+- **Reason:** the prototype runs on mock data and its own worker. The engine and fallbacks are what make the demo work end to end.
+
+### The landing page is a separate site on port 5180
+- **Chosen:** the landing page runs from `web/landing.html` on its own port, and its links go to the app on 5173 (`VITE_APP_URL` can change that).
+- **Rejected:** the landing page inside the app's router.
+- **Reason:** commits a477027 and 14cbcab. When both shared a stylesheet the landing layout broke. Two sites keeps each stylesheet separate.
+
+### Challenge pass marks are measured
+- **Chosen:** each challenge's cutoff comes from running the common answers: for example the van route must be within 5% of the exact best, Stop the Leaks within 2.5%, Grocery Gap at 95% of the best.
+- **Rejected:** a cutoff typed in by hand.
+- **Reason:** `docs/ai-log.md` entries 14 and 15. The cutoff sits between a correct greedy answer, which must pass, and the obvious wrong answer, which must fail.
+
+### Reference solutions run in real Pyodide in tests
+- **Chosen:** `practice.node.test.ts` and `demo.node.test.ts` run every harness in real Pyodide. Reference solutions must pass, starters must fail, and known wrong answers must be caught.
+- **Rejected:** testing only the TypeScript checkers.
+- **Reason:** the harness Python is the part a student's code touches. If it is wrong, a correct answer can fail on stage.
+
+### City problems are projects, not single files
+- **Chosen:** a city problem is a small Python project (files, README, tests). A solution is judged by the problem's own tests.
+- **Rejected:** a single editor box with one function.
+- **Reason:** reason: ask the owner. The commit does not record it.
+
+### The challenge coach has the same hint-only rule
+- **Chosen:** Sparks gives one hint at a time. The server holds the solution and checks the reply for leaks. A stored hint is the fallback.
+- **Rejected:** letting the browser send the solution as context.
+- **Reason:** the same reason as the mission coach. The plan says the coach never gives the answer.

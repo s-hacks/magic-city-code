@@ -1,3 +1,4 @@
+// Landing page, "Play" stage: a small try-it demo on mock data that shows residents lighting up as you place hubs.
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as RKE } from 'react';
 import { appHref } from '../appUrl';
 import type { StageProps } from '../Landing';

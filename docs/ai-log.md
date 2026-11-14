@@ -141,3 +141,81 @@ Format: date, what was asked, what was kept, what was changed or rejected, and w
   - Added optional per-challenge page text (legend, flood switch, messages).
 - **Verified:** `practice.node.test.ts` runs each harness in real Pyodide. Reference solutions pass every test, starters fail, and common wrong answers are caught. All three challenges were also run in the browser.
 - **Not touched:** the City problems seed projects in `web/public/data/city-problems/` (another session is building those).
+
+## 15. Three map-heavy demo challenges and the top-5 order
+- **Date:** 2026-11-14 (not committed yet)
+- **Owner area:** challenges (`web/src/challenges/leaks`, `grocery`, `flood`), data (`web/scripts/prep_demo_challenges.py`), order (`web/src/data/community.ts`)
+- **Asked:** complicated problems with a lot to show in the demo; rank the top 5 by impact and put them first.
+- **Built:**
+  - **Stop the Leaks:** greedy crew scheduling with a live water-lost counter and moving trucks.
+  - **Grocery Gap:** citywide max coverage on 3D block groups.
+  - **Flood Cut-Off:** multi-source Dijkstra on 10,502 real street corners, with a heat-map wave replay.
+- **Pass thresholds were measured, not guessed:**
+  - Leaks: 2.5% (biggest-first is 3–6% over and fails; ratio dispatch is at most 1.4% over).
+  - Grocery: 95% of the exact best (top-k-alone reaches 41–55%; greedy reaches 96.6–100%).
+- **Fixed after browser testing:**
+  - The grocery replay rebuilt every polygon on every frame. It now uses feature-state.
+  - The camera ease cancelled the fit.
+  - The map helpers were made safe after the map is removed.
+- **Verified:** `demo.node.test.ts` (real Pyodide) passes. All 132 web and 69 server tests pass. All three challenges were accepted in the browser with the reference solution.
+- **Ranking and reasons:** `docs/top-problems.md`.
+
+## 16. UI prototype, After Dark palette and landing page
+- **Date:** 2026-11-14 (commits 72a9f53, 5aa156b, 680fc85, ca776ad, d210f8c, 4ac0b09, 0abe52e)
+- **Owner area:** UI prototype (Margulan Baizhakyp), merged into the app by Pranay Joshi
+- **Asked:** a new look for the app as a separate prototype with mock data, then port it onto the real app without losing the engine, server or data.
+- **Kept:**
+  - `web/src/theme.ts` as the single color source. The map lights and base map colors are derived from it.
+  - The landing page (its own site on port 5180).
+  - Home hero and the Mission screen markup and class names.
+- **Changed in the merge:**
+  - The prototype's own Pyodide worker, mock data and `App.tsx` stay out of the real app. It keeps its engine, runner and routes.
+  - Home camera clears the hero, and the ash-colored residents were made quieter (ca776ad).
+  - Code indentation is kept when text is scrubbed, and the Warm Nights note was shortened to fit 1280x720 (9663679).
+- **Where each file went:** `docs/ui-integration.md`.
+
+## 17. Route to Fresh Food challenge
+- **Date:** 2026-11-14 (commit 5aa156b)
+- **Owner area:** `web/src/challenges/route/`, `web/public/data/graph.json`, `route_tests.json`, `web/scripts/prep_data.py`
+- **Asked:** a code challenge where the student finds the shortest walk to a grocery store on real Downtown and Woodlawn streets, with flooded streets closed in the second test.
+- **Kept:** real OpenStreetMap streets, the correct shortest path stored for each test, visible and hidden tests.
+- **Changed:** the challenge was ported to `forwardRef` for React 18 in the real app (`docs/ui-integration.md`).
+
+## 18. Challenges hub and Practice list
+- **Date:** 2026-11-14 (commits e5c0428, f817468, 6e11d25)
+- **Owner area:** `web/src/pages/ChallengeList.tsx`, `web/src/data/community.ts`
+- **Asked:** one page at `/challenges` with the Practice list and the City problems idea, and a Home hero with two doors: Browse challenges and Solve a real city problem.
+- **Kept:** the hub, the hero buttons, links to the working missions from the Practice list.
+- **Changed:** the hub was merged from the prototype branch (`ui-prototype`) after the After Dark merge. The top-5 order came later (entry 15).
+
+## 19. Sparks, the challenge coach, and map colors
+- **Date:** 2026-11-14 (commits 75be74d, 7639323, 21865d7)
+- **Owner area:** `web/src/challenges/CoachPanel.tsx`, `server/src/challengeCoach.ts`, `web/src/map/`
+- **Asked:** a coach for the challenge screen that gives one hint at a time and never writes the answer, docked inside the code card, and real-world map colors for streets, land use, water and buildings.
+- **Kept:** the same hint-only rule as the mission coach (entry 7): the server holds the reference solution and its guard blocks leaks, and a stored hint is the fallback when there is no API key.
+- **Changed:** the coach moved from a floating box into the code card (7639323).
+
+## 20. Light mode and mission layout
+- **Date:** 2026-11-14 (commits 041dd84, b522fcf, a477027, 14cbcab)
+- **Owner area:** `web/src/theme.ts`, `web/src/index.css`, `web/src/mission/`, `web/src/landing/`
+- **Asked:** a light theme with enough contrast to read on a projector, missions laid out like challenges (code left, map right), the app on 5173 and the landing page on 5180.
+- **Kept:** contrast and color fixes for light mode, and the code-left, map-right mission layout.
+- **Fixed:** the landing page was loading the app stylesheet and broke its layout. It now loads its own CSS only (14cbcab).
+
+## 21. City problems: post a problem, solve it as a project, leaderboard
+- **Date:** 2026-11-14 (commit 8e8a242)
+- **Owner area:** `shared/cityProblems.ts`, `server/src/cityProblems.ts`, `web/src/pages/Workspace.tsx`, `web/src/workspace/`, seed projects in `web/public/data/city-problems/`
+- **Asked:** a resident or group posts a problem, the server builds a small Python starter project for it (files, README, tests) with no AI call, a student solves it in a browser workspace, and the best solutions are ranked on a leaderboard.
+- **Built:**
+  - Four seed problems: Bus Shelters, Storm Drains, Stray Routes, Water Bills. Each has a starter project, and three have reference solutions.
+  - A workspace with a file tree, tabs, Output and Tests. **Run** runs `main.py`, **Run tests** runs `tests/test_*.py`, and **Submit** re-runs the problem's own tests and sends the project to the server.
+  - Points for a chosen solution and for votes (`POINTS_CHOSEN`, `POINTS_VOTE`), and size limits on projects (`PROJECT_LIMITS`).
+- **Safety:** file paths are checked with `isSafePath`, project size is capped, and file and folder paths are checked on submit. Tests are in `server/test/cityProblems.test.ts`.
+- **Verified:** typecheck passes, and the web and server tests run in the final check below.
+
+## 22. Submission pass: file headers, submission checklist, demo script
+- **Date:** 2026-11-14
+- **Owner area:** docs, and header comments only
+- **Asked:** check the repo against the Shipt Hacks submission notes, and add what is missing.
+- **Added:** `SUBMISSION.md` (what is submitted, the judging criteria mapped to files, open questions), `docs/demo-script.md` (the three-minute demo and the fallback plan), and a plain-words comment at the top of five files that had none (`route/check.ts`, `route/index.tsx`, `route/viz.ts`, `landing/stages/Data.tsx`, `landing/stages/Play.tsx`).
+- **Not changed:** no code logic was touched.

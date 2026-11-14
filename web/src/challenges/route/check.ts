@@ -1,3 +1,4 @@
+// Route to Fresh Food: types for the street graph and test cases, and the checker that compares the student's path with the shortest one.
 import type { TestRun } from '../../py/runner';
 import type { RunOptions, Verdict } from '../types';
 

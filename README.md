@@ -40,6 +40,9 @@ pnpm -r test
 | `.claude/agents/` | The Claude Code subagent role files used to build the app. |
 
 Docs:
+- [SUBMISSION.md](SUBMISSION.md): what is submitted, the judging criteria mapped to files, open questions.
+- [docs/demo-script.md](docs/demo-script.md): the three-minute demo and the fallback plan.
+- [docs/ui-integration.md](docs/ui-integration.md): how the UI prototype maps onto the app.
 - [docs/implementation-plan.md](docs/implementation-plan.md): the plan, scope and judging notes.
 - [docs/ui-plan.md](docs/ui-plan.md): screen plan.
 - [docs/showcase-examples.md](docs/showcase-examples.md): the five showcase missions and their results.
