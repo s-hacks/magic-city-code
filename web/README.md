@@ -14,13 +14,12 @@ Needs internet: map tiles come from OpenFreeMap and Python from the Pyodide CDN 
 
 ## Route to Fresh Food (code challenge)
 
-Home → **Code challenge: Long walk to groceries**. Students write `shortest_path(graph, start, goal)` on the real downtown + Woodlawn walking network.
+Home → **Browse challenges** → **Route to Fresh Food**. Students write `shortest_path(graph, start, goal)` on the real downtown + Woodlawn walking network.
 
 - **Run** = 2 visible tests, replayed on the map: blue = corners your code explored, orange = corners explored again, gold = your route.
-- **Submit** = visible + hidden tests (flooded underpasses, start = goal, an unreachable store). After 2 failed submits you can show the best route as a ghost line.
-- **Flood mode** closes Birmingham's railroad underpasses and reruns.
-- Checks stop at the first failure and show it on the map: crash, timeout, wrong type/empty, wrong start/end, "no street here", flooded street, longer than optimal.
-- Keys (outside the editor): `R` run · `S` submit · `F` flood · `Space` play/pause · `1` load the solution (demo) · `0` reset · `⌘↵` run from the editor.
+- **Submit** = visible + hidden tests (another school, start = goal, an unreachable store). After 2 failed submits you can show the best route as a ghost line.
+- Checks stop at the first failure and show it on the map: crash, timeout, wrong type/empty, wrong start/end, "no street here", closed street, longer than optimal.
+- Keys (outside the editor): `R` run · `S` submit · `Space` play/pause · `1` load the solution (demo) · `0` reset · `⌘↵` run from the editor.
 
 ### Rebuild the data
 
@@ -29,7 +28,7 @@ cd web
 uv run --python 3.12 --with osmnx --with networkx scripts/prep_data.py
 ```
 
-Writes `public/data/graph.json` (`{nodes: {id: [lat, lon]}, edges: [[u, v, meters, geom?]]}`) and `public/data/route_tests.json` (places, flood closures, tests with the correct shortest paths from networkx). OSM responses are cached in `scripts/.osmnx-cache`.
+Writes `public/data/graph.json` (`{nodes: {id: [lat, lon]}, edges: [[u, v, meters, geom?]]}`) and `public/data/route_tests.json` (places and tests with the correct shortest paths from networkx). OSM responses are cached in `scripts/.osmnx-cache`.
 
 ## Adding a challenge
 

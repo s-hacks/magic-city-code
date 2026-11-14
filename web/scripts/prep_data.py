@@ -5,7 +5,7 @@ Run from web/:
 
 Writes:
     public/data/graph.json        {nodes: {id: [lat, lon]}, edges: [[u, v, meters, geom?]]}
-    public/data/route_tests.json  places, flood closures, tests with the correct shortest paths
+    public/data/route_tests.json  places + tests with the correct shortest paths
 """
 
 import json
@@ -52,7 +52,7 @@ def main():
             if U.nodes[u]["x"] != pts[0][0]:  # orient geometry u -> v
                 pts.reverse()
             geom = [[round(x, 5), round(y, 5)] for x, y in pts[1:-1]]
-        S.add_edge(u, v, w=w, geom=geom, crossing=bool(d.get("bridge")) or bool(d.get("tunnel")), name=d.get("name"))
+        S.add_edge(u, v, w=w, geom=geom, name=d.get("name"))
     S = S.subgraph(max(nx.connected_components(S), key=len)).copy()
 
     ids = {osm: i for i, osm in enumerate(S.nodes)}
@@ -111,44 +111,27 @@ def main():
             break
     assert len(chosen) >= 3, "not enough school/store pairs; widen BBOX"
 
-    # Flood: close bridge/tunnel crossings (Birmingham's railroad underpasses flood) on the chosen routes,
-    # falling back to plain route edges, while every pair stays reachable.
-    flood = []
-    for s, g, r in chosen[:3]:
-        path = r["path"]
-        on_route = [(a, b) for a, b in zip(path, path[1:])]
-        crossings = [e for e in on_route if R[e[0]][e[1]]["crossing"]] or on_route[len(on_route) // 2 : len(on_route) // 2 + 1]
-        for e in crossings[:2]:
-            trial = flood + [list(e)]
-            if all(sp(a["node"], b["node"], trial)["path"] for a, b, _ in chosen):
-                flood = trial
-
-    def test(tid, name, visible, s, g, extra_closed=(), force_flood=False):
-        closed = [list(e) for e in extra_closed]
-        t = {"id": tid, "name": name, "visible": visible, "start": s["node"], "goal": g["node"],
-             "startName": s["name"], "goalName": g["name"], "closed": closed, "flood": force_flood,
-             "expected": sp(s["node"], g["node"], closed + (flood if force_flood else []))}
-        if not force_flood:
-            t["expectedFlood"] = sp(s["node"], g["node"], closed + flood)
-        return t
+    def test(tid, name, visible, s, g, closed=()):
+        closed = [list(e) for e in closed]
+        return {"id": tid, "name": name, "visible": visible, "start": s["node"], "goal": g["node"],
+                "startName": s["name"], "goalName": g["name"], "closed": closed,
+                "expected": sp(s["node"], g["node"], closed)}
 
     (s1, g1, _), (s2, g2, _), (s3, g3, _) = chosen[:3]
-    # Unreachable: a store whose only streets are flooded (close every edge around it).
+    # Unreachable: close every street around a store.
     s4, g4, _ = chosen[3] if len(chosen) > 3 else chosen[0]
     cut = [[g4["node"], n] for n in R.neighbors(g4["node"])]
     tests = [
         test("t1", f"{s1['name']} → {g1['name']}", True, s1, g1),
         test("t2", f"{s2['name']} → {g2['name']}", True, s2, g2),
         test("h1", f"{s3['name']} → {g3['name']}", False, s3, g3),
-        test("h2", f"Flooded underpasses: {s1['name']} → {g1['name']}", False, s1, g1, force_flood=True),
-        test("h3", f"Already there: {g2['name']}", False, g2, g2),
-        test("h4", f"Cut off: {s4['name']} → {g4['name']} (every street around it is flooded)", False, s4, g4, extra_closed=cut),
+        test("h2", f"Already there: {g2['name']}", False, g2, g2),
+        test("h3", f"Can't be reached: {s4['name']} → {g4['name']} (every street around it is closed)", False, s4, g4, closed=cut),
     ]
-    data = {"places": places, "flood": {"closed": flood, "label": "Flooded railroad underpasses"}, "tests": tests}
+    data = {"places": places, "tests": tests}
     (OUT / "route_tests.json").write_text(json.dumps(data, indent=1, ensure_ascii=False))
     for t in tests:
-        print(t["id"], t["name"], t["expected"]["meters"], "flood:", t.get("expectedFlood", {}).get("meters"))
-    print("flood closures:", flood)
+        print(t["id"], t["name"], t["expected"]["meters"])
 
 
 if __name__ == "__main__":

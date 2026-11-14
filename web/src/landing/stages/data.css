@@ -20,7 +20,7 @@
 .dt-tab[aria-selected='true'] .dt-tab-n { color: var(--accent); }
 .dt-tab-name { font-weight: 600; font-size: 15px; }
 .dt-trend { font: 500 11px/1.2 var(--mono); color: var(--muted); }
-.dt-trend.up { color: #b9b9c2; }
+.dt-trend.up { color: var(--muted); }
 .dt-trend.up::before { content: '↓ '; }
 .dt-trend.down { color: var(--accent-2); }
 .dt-trend.down::before { content: '↑ '; }
@@ -87,15 +87,15 @@
 .dt-food { --s: 26px; }
 .dt-iso { position: relative; width: calc(var(--s) * 10); height: calc(var(--s) * 10); margin: 20px 0 30px; transform-style: preserve-3d; transform: rotateX(58deg) rotateZ(-45deg); cursor: pointer; }
 .dt-cube { --h: 5px; position: absolute; left: calc(var(--x) * var(--s)); top: calc(var(--y) * var(--s)); width: calc(var(--s) - 3px); height: calc(var(--s) - 3px); transform-style: preserve-3d;
-  background: #3a3a42; transform: translateZ(var(--h)); animation: dt-rise .7s var(--spring) both; animation-delay: calc(var(--k) * 35ms); }
+  background: var(--line); transform: translateZ(var(--h)); animation: dt-rise .7s var(--spring) both; animation-delay: calc(var(--k) * 35ms); }
 .dt-cube::before, .dt-cube::after { content: ''; position: absolute; }
-.dt-cube::before { left: 0; top: 100%; width: 100%; height: var(--h); background: #24242a; transform-origin: top; transform: rotateX(-90deg); }
-.dt-cube::after { top: 0; left: 100%; width: var(--h); height: 100%; background: #2d2d34; transform-origin: left; transform: rotateY(90deg); }
+.dt-cube::before { left: 0; top: 100%; width: 100%; height: var(--h); background: var(--surface); transform-origin: top; transform: rotateX(-90deg); }
+.dt-cube::after { top: 0; left: 100%; width: var(--h); height: 100%; background: var(--raised); transform-origin: left; transform: rotateY(90deg); }
 .dt-cube.lit { --h: 16px; background: var(--accent-2); box-shadow: 0 0 18px 2px color-mix(in srgb, var(--accent) 70%, transparent); animation-name: dt-rise, dt-glow; animation-duration: .7s, 2.8s; animation-iteration-count: 1, infinite; animation-delay: calc(var(--k) * 35ms), calc(var(--k) * 90ms); animation-timing-function: var(--spring), ease-in-out; }
 .dt-cube.lit::before { background: var(--accent); }
-.dt-cube.lit::after { background: #c23e0c; }
+.dt-cube.lit::after { background: color-mix(in srgb, var(--accent) 60%, #000); }
 @keyframes dt-rise { from { transform: translateZ(0); opacity: 0; } }
-@keyframes dt-glow { 50% { background: #ffd4a1; } }
+@keyframes dt-glow { 50% { background: #FFF1C2; } }
 
 /* crime comparison */
 .dt-cmp { align-items: stretch; gap: 12px; }
@@ -122,7 +122,7 @@
 /* transit waffle */
 .dt-waffle-fig { align-items: stretch; }
 .dt-waffle { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; width: min(100%, 250px); align-self: center; }
-.dt-waffle span { aspect-ratio: 1; border-radius: 3px; background: #34343b; cursor: pointer; animation: dt-pop .4s var(--spring) both; animation-delay: calc(var(--i) * 9ms); transition: transform .15s; }
+.dt-waffle span { aspect-ratio: 1; border-radius: 3px; background: var(--raised); cursor: pointer; animation: dt-pop .4s var(--spring) both; animation-delay: calc(var(--i) * 9ms); transition: transform .15s; }
 .dt-waffle span.hot { background: var(--accent); }
 .dt-waffle span:hover { transform: scale(1.25); }
 

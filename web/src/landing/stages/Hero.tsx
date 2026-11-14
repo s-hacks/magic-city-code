@@ -3,7 +3,14 @@ import * as THREE from 'three';
 import type { StageProps } from '../Landing';
 import { Arrow } from '../Landing';
 import { city } from '../facts';
+import { themes } from '../../theme';
 import './hero.css';
+
+// Colors come from the app theme (src/theme.ts) so the landing and the app match.
+const T = themes.night;
+const ACCENT_2 = '#FFE08A'; // hot core of gold, for glows next to T.accent
+/** '#RRGGBB' -> GLSL vec3 in sRGB, matching how the shaders were written. */
+const glsl = (hex: string) => `vec3(${[1, 3, 5].map((i) => (parseInt(hex.slice(i, i + 2), 16) / 255).toFixed(3)).join(',')})`;
 
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -126,14 +133,14 @@ function createCity(el: HTMLElement, still: boolean, hud: (pct: number, hubs: nu
     return null;
   }
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-  renderer.setClearColor(0x09090b);
+  renderer.setClearColor(T.bg);
   el.appendChild(renderer.domElement);
 
   let seed = 7;
   const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x1a0905, 70, 210);
+  scene.fog = new THREE.Fog(new THREE.Color(T.horizon).multiplyScalar(0.45), 70, 210);
   const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 900);
 
   // sky dome: furnace glow on the horizon, near-black overhead
@@ -144,21 +151,21 @@ function createCity(el: HTMLElement, still: boolean, hud: (pct: number, hubs: nu
       vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }',
       fragmentShader: `varying vec3 vP; void main(){
         float h = normalize(vP).y;
-        vec3 c = mix(vec3(0.239,0.078,0.024), vec3(0.035,0.035,0.043), smoothstep(-0.02, 0.32, h));
-        c += vec3(0.25,0.08,0.02) * exp(-abs(h) * 28.);
+        vec3 c = mix(${glsl(T.horizon)}, ${glsl(T.bg)}, smoothstep(-0.02, 0.32, h));
+        c += ${glsl(T.violet)} * 0.22 * exp(-abs(h) * 28.);
         gl_FragColor = vec4(c, 1.); }`,
     }),
   ));
 
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), new THREE.MeshStandardMaterial({ color: 0x0b0b0e, roughness: 1 }));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), new THREE.MeshStandardMaterial({ color: T.land, roughness: 1 }));
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
 
-  scene.add(new THREE.HemisphereLight(0x3a3a4c, 0x3d1406, 1.1));
-  const rim = new THREE.DirectionalLight(0xff6a2a, 1.1);
+  scene.add(new THREE.HemisphereLight(T.line, T.horizon, 1.1));
+  const rim = new THREE.DirectionalLight(T.violet, 1.1);
   rim.position.set(-60, 18, -90);
   scene.add(rim);
-  const moon = new THREE.DirectionalLight(0x7a82a6, 0.55);
+  const moon = new THREE.DirectionalLight(T.blue, 0.55);
   moon.position.set(50, 70, 40);
   scene.add(moon);
 
@@ -183,7 +190,7 @@ function createCity(el: HTMLElement, still: boolean, hud: (pct: number, hubs: nu
     m.compose(new THREE.Vector3(l.x, 0, l.z), new THREE.Quaternion(), new THREE.Vector3(w, l.h, dpt));
     buildings.setMatrixAt(k, m);
     const g = 0.085 + rnd() * 0.05;
-    buildings.setColorAt(k, col.setRGB(g, g, g * 1.12));
+    buildings.setColorAt(k, col.setRGB(g * 0.78, g * 0.82, g * 1.4)); // indigo steel, like the app's buildings
   });
   scene.add(buildings);
 
@@ -219,7 +226,7 @@ function createCity(el: HTMLElement, still: boolean, hud: (pct: number, hubs: nu
         float k = uTime - aT;
         float lit = clamp(k / .45, 0., 1.) * uFade;
         float flash = k > 0. ? exp(-k * 2.2) * uFade : 0.;
-        vC = mix(vec3(.36,.36,.40), vec3(1.,.353,.122), lit) + vec3(1.,.722,.42) * flash;
+        vC = mix(${glsl(T.ash)}, ${glsl(T.accent)}, lit) + ${glsl(ACCENT_2)} * flash;
         float tw = .8 + .2 * sin(uTime * 1.7 + aSeed * 40.);
         vA = mix(.75, 1., lit) * tw * smoothstep(230., 80., -mv.z);
         gl_PointSize = (2.6 + lit * 3.6 + flash * 7.) * uPR * (110. / -mv.z);
@@ -241,9 +248,9 @@ function createCity(el: HTMLElement, still: boolean, hud: (pct: number, hubs: nu
     c.width = c.height = 64;
     const g = c.getContext('2d')!;
     const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-    gr.addColorStop(0, 'rgba(255,184,107,1)');
-    gr.addColorStop(0.25, 'rgba(255,90,31,.55)');
-    gr.addColorStop(1, 'rgba(255,90,31,0)');
+    gr.addColorStop(0, ACCENT_2);
+    gr.addColorStop(0.25, `${T.accent}8c`);
+    gr.addColorStop(1, `${T.accent}00`);
     g.fillStyle = gr;
     g.fillRect(0, 0, 64, 64);
     return new THREE.CanvasTexture(c);
@@ -259,19 +266,19 @@ function createCity(el: HTMLElement, still: boolean, hud: (pct: number, hubs: nu
       vertexShader: 'varying vec2 vU; void main(){ vU = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }',
       fragmentShader: `uniform float uI; varying vec2 vU; void main(){
         float a = pow(1. - vU.y, 1.6) * uI;
-        gl_FragColor = vec4(mix(vec3(1.,.353,.122), vec3(1.,.722,.42), pow(1. - vU.y, 6.)), a); }`,
+        gl_FragColor = vec4(mix(${glsl(T.accent)}, ${glsl(ACCENT_2)}, pow(1. - vU.y, 6.)), a); }`,
     });
     const beam = new THREE.Mesh(beamGeo, beamMat);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0xff5a1f, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+    const ringMat = new THREE.MeshBasicMaterial({ color: T.accent, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.position.y = 0.2;
-    const zoneMat = new THREE.MeshBasicMaterial({ map: halo, color: 0xff5a1f, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+    const zoneMat = new THREE.MeshBasicMaterial({ map: halo, color: T.accent, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
     const zone = new THREE.Mesh(discGeo, zoneMat);
     zone.position.y = 0.1;
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, opacity: 0 }));
     sprite.position.y = 1.2;
     sprite.scale.setScalar(9);
-    const light = new THREE.PointLight(0xff5a1f, 0, 34, 1.3);
+    const light = new THREE.PointLight(T.accent, 0, 34, 1.3);
     light.position.y = 4;
     const g = new THREE.Group();
     g.add(beam, ring, zone, sprite, light);

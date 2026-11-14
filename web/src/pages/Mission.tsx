@@ -26,6 +26,7 @@ interface Props {
   onCompare: (on: boolean) => void;
   onToggle: (g: LayerGroup) => void;
   onHome: () => void;
+  onBack: () => void;
   onTheme: () => void;
 }
 
@@ -44,7 +45,10 @@ export default function Mission(p: Props) {
   return (
     <>
       <header className="topbar">
-        <button className="brand link" onClick={p.onHome} title="Home (H)"><Mark /> Magic City Code</button>
+        <div className="row center">
+          <button className="brand link" onClick={p.onHome} title="Home (H)"><Mark /> Magic City Code</button>
+          <button className="btn ghost small back-btn" onClick={p.onBack}>← All challenges</button>
+        </div>
         <nav className="levels" aria-label="Levels">
           <span className="crumb">{mission.neighborhood}</span>
           {mission.levels.map((l, i) => (

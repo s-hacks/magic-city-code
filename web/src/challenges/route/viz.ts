@@ -2,8 +2,8 @@ import * as maplibregl from 'maplibre-gl';
 import type { GeoJSONSource, Map as MLMap } from 'maplibre-gl';
 import type { Feature, LineString } from 'geojson';
 import type { TestRun } from '../../py/runner';
-import type { RunOptions, Verdict, Viz } from '../types';
-import { closedFor, expectedFor, key, miles, pathMeters, repeats, walkMin, type RouteData, type RouteTest } from './check';
+import type { Verdict, Viz } from '../types';
+import { key, miles, pathMeters, repeats, walkMin, type RouteData, type RouteTest } from './check';
 
 type LngLat = [number, number];
 const css = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -35,10 +35,10 @@ export function createRouteViz(map: MLMap, d: RouteData): Viz<RouteTest> {
   const add = (id: string, data = fc([]), promoteId?: string) => map.addSource(id, { type: 'geojson', data, ...(promoteId ? { promoteId } : {}) });
   add('r-edges', fc(edgeCoords.map((c, i) => line(c, { i }))), 'i');
   add('r-nodes', fc(Object.entries(d.graph.nodes).map(([n, [lat, lon]]) => ({ type: 'Feature', properties: { n: Number(n) }, geometry: { type: 'Point', coordinates: [lon, lat] } }))), 'n');
-  for (const id of ['r-pulse', 'r-route', 'r-ghost', 'r-flood', 'r-bad']) add(id);
+  for (const id of ['r-pulse', 'r-route', 'r-ghost', 'r-closed', 'r-bad']) add(id);
   const s: maplibregl.ExpressionSpecification = ['number', ['feature-state', 's'], 0];
   const layers: maplibregl.LayerSpecification[] = [
-    { id: 'r-flood', type: 'line', source: 'r-flood', paint: { 'line-color': C.orange, 'line-width': 7, 'line-opacity': 0.9, 'line-dasharray': [1, 1] } },
+    { id: 'r-closed', type: 'line', source: 'r-closed', paint: { 'line-color': C.red, 'line-width': 4, 'line-opacity': 0.7, 'line-dasharray': [1, 1] } },
     { id: 'r-edges-glow', type: 'line', source: 'r-edges', paint: { 'line-color': C.blue, 'line-width': 9, 'line-blur': 6, 'line-opacity': ['case', ['>', s, 0], 0.45, 0] } },
     { id: 'r-edges', type: 'line', source: 'r-edges', paint: { 'line-color': C.cyan, 'line-width': 1.6, 'line-opacity': ['case', ['>', s, 0], 0.9, 0] } },
     { id: 'r-nodes', type: 'circle', source: 'r-nodes', paint: {
@@ -69,7 +69,7 @@ export function createRouteViz(map: MLMap, d: RouteData): Viz<RouteTest> {
   };
 
   // --- state ------------------------------------------------------------------
-  let test: RouteTest | null = null, run: TestRun | null = null, verdict: Verdict | null = null, opts: RunOptions = { flood: false };
+  let test: RouteTest | null = null, run: TestRun | null = null, verdict: Verdict | null = null;
   let ev: number[] = [], cur = 0, raf = 0;
   let markers: maplibregl.Marker[] = [], endMarkers: maplibregl.Marker[] = [];
   const nodeS = new Map<number, number>(), count = new Map<number, number>(), litEdges = new Set<number>();
@@ -112,20 +112,20 @@ export function createRouteViz(map: MLMap, d: RouteData): Viz<RouteTest> {
   }
 
   return {
-    show(t, r, v, o) {
-      test = t; run = r; verdict = v; opts = o;
+    show(t, r, v) {
+      test = t; run = r; verdict = v;
       markers.forEach((m) => m.remove()); markers = [];
       clearEnd(); reset(); dim(false);
       ev = r?.events ?? [];
       src('r-ghost').setData(fc([]));
-      src('r-flood').setData(fc(closedFor(t, d, o).map(([a, b]) => line(segment(a, b)))));
+      src('r-closed').setData(fc(t.closed.map(([a, b]) => line(segment(a, b)))));
       const pin = (n: number, cls: string, label: string) => {
         const el = div(`pin ${cls}`); el.append(div('pin-dot'), div('pin-label', label));
         mark(ll(n), el, markers, 'bottom');
       };
       pin(t.start, 'start', t.startName);
       if (t.goal !== t.start) pin(t.goal, 'goal', t.goalName);
-      const exp = expectedFor(t, o).path;
+      const exp = t.expected.path;
       fit(exp.length > 1 ? pathCoords(exp) : [ll(t.start), ll(t.goal)]);
       return ev.length / 3;
     },
@@ -147,7 +147,7 @@ export function createRouteViz(map: MLMap, d: RouteData): Viz<RouteTest> {
       const bad = (a: number, b: number, c: string, label: string) => {
         src('r-bad').setData(fc([line(segment(a, b), { c })]));
         const [x, y] = [ll(a), ll(b)];
-        mark([(x[0] + y[0]) / 2, (x[1] + y[1]) / 2], div(`map-tag ${verdict!.kind === 'closed' ? 'warn flash' : 'bad'}`, label), endMarkers);
+        mark([(x[0] + y[0]) / 2, (x[1] + y[1]) / 2], div('map-tag bad', label), endMarkers);
       };
 
       if (verdict.kind === 'crash') {
@@ -177,23 +177,23 @@ export function createRouteViz(map: MLMap, d: RouteData): Viz<RouteTest> {
         if (d.graph.nodes[wrong]) mark(ll(wrong), div('x-mark', '✕'), endMarkers);
       }
       if (verdict.kind === 'gap' || verdict.kind === 'closed') {
-        const closed = new Set(closedFor(test, d, opts).flatMap(([a, b]) => [key(a, b), key(b, a)]));
+        const closed = new Set(test.closed.flatMap(([a, b]) => [key(a, b), key(b, a)]));
         for (let i = 1; i < p.length; i++) {
           const [a, b] = [p[i - 1], p[i]];
-          if (closed.has(key(a, b))) { bad(a, b, C.orange, 'Flooded street'); break; }
+          if (closed.has(key(a, b))) { bad(a, b, C.red, 'Closed street'); break; }
           if (!edgeOf.has(key(a, b)) && d.graph.nodes[a] && d.graph.nodes[b]) { bad(a, b, C.red, 'No street here'); break; }
         }
       }
     },
 
     ghost(on) {
-      src('r-ghost').setData(fc(on && test ? [line(pathCoords(expectedFor(test, opts).path))] : []));
+      src('r-ghost').setData(fc(on && test ? [line(pathCoords(test.expected.path))] : []));
     },
 
     destroy() {
       clearEnd(); markers.forEach((m) => m.remove());
       layers.forEach((l) => map.getLayer(l.id) && map.removeLayer(l.id));
-      ['r-edges', 'r-nodes', 'r-pulse', 'r-route', 'r-ghost', 'r-flood', 'r-bad'].forEach((id) => map.getSource(id) && map.removeSource(id));
+      ['r-edges', 'r-nodes', 'r-pulse', 'r-route', 'r-ghost', 'r-closed', 'r-bad'].forEach((id) => map.getSource(id) && map.removeSource(id));
     },
   };
 }

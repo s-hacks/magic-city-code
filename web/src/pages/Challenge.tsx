@@ -4,7 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import Editor, { type EditorHandle } from '../code/Editor';
 import { applyTheme, makeStyle } from '../map/style';
 import { runPython, setup, type TestRun } from '../py/runner';
-import type { BaseTest, Challenge, RunOptions, Verdict, Viz } from '../challenges/types';
+import type { BaseTest, Challenge, Verdict, Viz } from '../challenges/types';
 import type { ThemeName } from '../theme';
 import { BIRMINGHAM } from '../data/mock';
 import { Mark } from './Mission';
@@ -27,7 +27,6 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
   const [rows, setRows] = useState<Row<T>[]>([]);
   const [sel, setSel] = useState(0);
   const [mode, setMode] = useState<'run' | 'submit' | null>(null);
-  const [flood, setFlood] = useState(false);
   const [fails, setFails] = useState(0);
   const [ghost, setGhost] = useState(false);
   const [k, setK] = useState(0);
@@ -55,14 +54,13 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
 
   useEffect(() => { if (map.current?.loaded()) applyTheme(map.current, theme); }, [theme]);
 
-  const opts: RunOptions = { flood };
   const visible = data ? ch.tests(data).filter((t) => t.visible) : [];
 
   // Draw a test (and its replay, if it ran) on the map.
-  const showRow = useCallback((row: Row<T>, o: RunOptions) => {
+  const showRow = useCallback((row: Row<T>) => {
     if (!viz.current) return;
     editor.current?.mark(null, 'run');
-    const n = viz.current.show(row.test, row.run, row.verdict, o);
+    const n = viz.current.show(row.test, row.run, row.verdict);
     viz.current.ghost(false);
     setGhost(false);
     setLen(n); setK(0);
@@ -80,7 +78,7 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
 
   // first view: visible test 1, nothing run yet
   useEffect(() => {
-    if (data && !rows.length) showRow({ test: visible[0], run: null, verdict: null }, opts);
+    if (data && !rows.length) showRow({ test: visible[0], run: null, verdict: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
@@ -96,7 +94,7 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
     const tick = () => {
       const next = Math.min(len, kRef.current + step);
       const line = viz.current!.seek(next);
-      editor.current?.mark(line || null, 'run');
+      editor.current?.mark(line || null, 'run', false); // no scrolling mid-replay: it made the editor jump
       setK(next);
       if (next >= len) finish(rowRef.current);
       else raf = requestAnimationFrame(tick);
@@ -116,7 +114,7 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
 
   // --- run / submit ----------------------------------------------------------------
   const [queued, setQueued] = useState<'run' | 'submit' | null>(null);
-  const execute = async (kind: 'run' | 'submit', o: RunOptions = opts) => {
+  const execute = async (kind: 'run' | 'submit') => {
     if (py === 'loading') { setQueued(kind); return; } // run as soon as Python is ready
     if (!data || busy || py !== 'ready' || !editor.current) return;
     const code = editor.current.getCode();
@@ -126,7 +124,7 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
     editor.current.mark(null, 'run');
     let runs: TestRun[] | 'killed';
     try {
-      runs = await runPython(code, ch.payload(tests, data, o));
+      runs = await runPython(code, ch.payload(tests, data));
     } catch (e) {
       runs = tests.map((t) => ({ id: t.id, events: [], result: null, error: { line: 0, message: String(e) }, timedOut: false, ms: 0 }));
     }
@@ -137,7 +135,7 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
     let failed = -1;
     tests.forEach((t, i) => {
       const run = failed < 0 ? runs[i] ?? null : null;
-      const verdict = run ? ch.check(t, run, data, o) : null;
+      const verdict = run ? ch.check(t, run, data) : null;
       if (verdict && !verdict.ok && failed < 0) failed = i;
       out.push({ test: t, run, verdict });
     });
@@ -146,7 +144,7 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
     // replay the failing test, or the first visible one
     const pick = failed >= 0 ? failed : 0;
     setSel(pick);
-    showRow(out[pick], o);
+    showRow(out[pick]);
   };
 
   useEffect(() => {
@@ -154,14 +152,7 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [py, queued]);
 
-  const toggleFlood = () => {
-    const o = { flood: !flood };
-    setFlood(o.flood);
-    if (mode) execute(mode === 'submit' ? 'run' : mode, o);
-    else if (data) showRow({ test: visible[0], run: null, verdict: null }, o);
-  };
-
-  // demo keys: R run, S submit, F flood, 1 load solution, 0 reset
+  // demo keys: R run, S submit, 1 load solution, 0 reset
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).closest('.cm-editor, input, textarea') || e.metaKey || e.ctrlKey || e.altKey) {
@@ -171,7 +162,6 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
       const key = e.key.toLowerCase();
       if (key === 'r') execute('run');
       if (key === 's') execute('submit');
-      if (key === 'f') toggleFlood();
       if (key === '1') editor.current?.setCode(ch.solution);
       if (key === '0') editor.current?.setCode(ch.starterCode);
       if (key === ' ' && len) { e.preventDefault(); setPlaying((p) => !p); }
@@ -188,8 +178,9 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
     <div className="challenge">
       <header className="cbar">
         <button className="brand link" onClick={onHome} title="Home (H)"><Mark /> Magic City Code</button>
+        <button className="btn ghost small back-btn" onClick={onList}>← All challenges</button>
         <div className="ctitle">
-          <button className="crumb link-btn quiet" onClick={onList}>Challenges /</button> {ch.title}
+          {ch.title}
           <span className={`diff ${ch.difficulty.toLowerCase()}`}>{ch.difficulty}</span>
         </div>
         <button className="icon-btn" onClick={onTheme} title="Projector mode (D)" aria-label="Toggle projector mode">{theme === 'night' ? '☀' : '☾'}</button>
@@ -229,12 +220,8 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
           <div className="map-legend">
             <span><i className="sw blue" /> explored</span>
             <span><i className="sw gold" /> your route</span>
-            <span><i className="sw orange" /> problem / flooded</span>
             {ghost && <span><i className="sw ghost" /> best route</span>}
           </div>
-          <button className={`flood-toggle ${flood ? 'on' : ''}`} aria-pressed={flood} onClick={toggleFlood} title="Flood mode (F)">
-            <span className="knob" /> Flood mode
-          </button>
           {len > 0 && (
             <div className="timeline glass">
               <button className="icon-btn solid" onClick={() => (k >= len ? (scrub(0), setPlaying(true)) : setPlaying((p) => !p))} aria-label={playing ? 'Pause' : 'Play'}>
@@ -262,7 +249,7 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
                 key={r.test.id} role="tab" aria-selected={rows.length > 0 && i === sel}
                 className={`test-tab ${r.verdict ? (r.verdict.ok ? 'ok' : 'bad') : ''}`}
                 disabled={!rows.length || (!r.run && !r.verdict)}
-                onClick={() => { setSel(i); showRow(r, opts); }}
+                onClick={() => { setSel(i); showRow(r); }}
               >
                 <i className="dot" /> {r.test.visible ? `Case ${i + 1}` : `Hidden ${i + 1}`}
               </button>

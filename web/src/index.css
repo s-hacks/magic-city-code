@@ -243,12 +243,6 @@ h1, h2 { margin: 0; letter-spacing: -0.02em; }
 .sw.gold { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
 .sw.orange { background: var(--orange); }
 .sw.ghost { border: 2px dashed var(--text); }
-.flood-toggle { position: absolute; top: 12px; right: 56px; display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--glass); backdrop-filter: blur(12px); font-weight: 600; font-size: 13px; cursor: pointer; }
-.flood-toggle .knob { width: 34px; height: 20px; border-radius: 999px; background: var(--raised); position: relative; transition: background .2s; }
-.flood-toggle .knob::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: transform .2s var(--ease), background .2s; }
-.flood-toggle.on { border-color: var(--orange); color: var(--orange); }
-.flood-toggle.on .knob { background: color-mix(in srgb, var(--orange) 35%, transparent); }
-.flood-toggle.on .knob::after { transform: translateX(14px); background: var(--orange); }
 .timeline { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); width: min(560px, calc(100% - 28px)); display: flex; align-items: center; gap: 12px; padding: 8px 16px 8px 8px; border-radius: 999px; }
 .timeline input { flex: 1; accent-color: var(--cyan); }
 .icon-btn.solid { background: var(--brand); color: #fff; border: 0; font-size: 12px; }
@@ -393,3 +387,5 @@ h1, h2 { margin: 0; letter-spacing: -0.02em; }
   .prow > :nth-child(3), .prow > :nth-child(5) { display: none; }
   .facts { grid-template-columns: 1fr; }
 }
+.row.center { align-items: center; gap: 16px; }
+.back-btn { backdrop-filter: blur(12px); }

@@ -77,7 +77,7 @@
 
 /* ---------- detail dialog ---------- */
 .ms-dlg { padding: 0; border: 0; background: none; color: var(--text); max-width: min(640px, calc(100vw - 32px)); width: 100%; max-height: calc(100dvh - 48px); overflow: visible; }
-.ms-dlg::backdrop { background: rgba(9, 9, 11, .72); backdrop-filter: blur(6px); }
+.ms-dlg::backdrop { background: color-mix(in srgb, var(--bg) 72%, transparent); backdrop-filter: blur(6px); }
 .ms-panel { position: relative; overflow: auto; max-height: calc(100dvh - 48px); background: var(--surface); scrollbar-width: thin; }
 .ms-panel .ms-hdr { height: 150px; }
 .ms-panel .ms-body { padding: 20px 24px 24px; gap: 8px; }

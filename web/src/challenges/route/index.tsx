@@ -1,6 +1,6 @@
 import type { Challenge } from '../types';
 import harness from './harness.py?raw';
-import { checkRoute, closedFor, key, type RouteData, type RouteTest } from './check';
+import { checkRoute, key, type RouteData, type RouteTest } from './check';
 import { createRouteViz } from './viz';
 
 const starterCode = `import heapq
@@ -67,7 +67,7 @@ export const routeChallenge: Challenge<RouteData, RouteTest> = {
     return { raw: graphRaw, data: { graph, edgeLen, ...tests } };
   },
   tests: (d) => d.tests,
-  payload: (tests, d, o) => ({ stopOnFail: false, tests: tests.map((t) => ({ id: t.id, start: t.start, goal: t.goal, closed: closedFor(t, d, o) })) }),
+  payload: (tests) => ({ stopOnFail: false, tests: tests.map((t) => ({ id: t.id, start: t.start, goal: t.goal, closed: t.closed })) }),
   check: checkRoute,
   createViz: createRouteViz,
 
@@ -103,9 +103,7 @@ shortest_path(graph, 1, 3)  # -> [1, 2, 3]  (250 m)`}</pre>
           <li><code>city.coords(corner)</code> → <code>(lat, lon)</code></li>
           <li><code>city.distance(a, b)</code> → straight-line meters (great for A*)</li>
         </ul>
-        <h4>Flood mode</h4>
-        <p>Birmingham's railroad underpasses flood in heavy rain. Turn on <strong>Flood mode</strong> to close them; your code should route around.</p>
-        <p className="tiny">Time limit 3 s per test · hidden tests include flooding, start = goal, and a store you can't reach.</p>
+        <p className="tiny">Time limit 3 s per test · hidden tests include another school, start = goal, and a store you can't reach.</p>
       </>
     );
   },

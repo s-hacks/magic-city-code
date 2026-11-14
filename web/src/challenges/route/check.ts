@@ -1,5 +1,5 @@
 import type { TestRun } from '../../py/runner';
-import type { RunOptions, Verdict } from '../types';
+import type { Verdict } from '../types';
 
 export type LatLon = [number, number];
 export interface Graph { nodes: Record<string, LatLon>; edges: [number, number, number, [number, number][]?][] }
@@ -8,13 +8,12 @@ export interface Expected { path: number[]; meters: number | null }
 export interface RouteTest {
   id: string; name: string; visible: boolean;
   start: number; goal: number; startName: string; goalName: string;
-  closed: [number, number][]; flood: boolean;
-  expected: Expected; expectedFlood?: Expected;
+  closed: [number, number][]; // streets closed for this test (e.g. an unreachable store)
+  expected: Expected;
 }
 export interface RouteData {
   graph: Graph;
   places: Place[];
-  flood: { closed: [number, number][]; label: string };
   tests: RouteTest[];
   edgeLen: Map<string, number>; // "u-v" (both directions) -> meters
 }
@@ -22,9 +21,6 @@ export interface RouteData {
 export const key = (a: number, b: number) => `${a}-${b}`;
 export const miles = (m: number) => (m / 1609.34).toFixed(2);
 export const walkMin = (m: number) => Math.max(1, Math.round(m / 80)); // ~4.8 km/h
-export const closedFor = (t: RouteTest, d: RouteData, o: RunOptions) => [...t.closed, ...(floodOn(t, o) ? d.flood.closed : [])];
-export const floodOn = (t: RouteTest, o: RunOptions) => t.flood || (o.flood && t.visible);
-export const expectedFor = (t: RouteTest, o: RunOptions) => (floodOn(t, o) && !t.flood ? t.expectedFlood! : t.expected);
 
 export function pathMeters(path: number[], d: RouteData) {
   let m = 0;
@@ -40,8 +36,8 @@ export function repeats(events: number[]) {
 }
 
 // The 7 checks, in order; stops at the first failure.
-export function checkRoute(t: RouteTest, run: TestRun, d: RouteData, o: RunOptions): Verdict {
-  const exp = expectedFor(t, o);
+export function checkRoute(t: RouteTest, run: TestRun, d: RouteData): Verdict {
+  const exp = t.expected;
   if (run.error) return { ok: false, kind: 'crash', title: 'Your code crashed', detail: run.error.message, line: run.error.line };
   if (run.timedOut) {
     const r = repeats(run.events);
@@ -56,13 +52,13 @@ export function checkRoute(t: RouteTest, run: TestRun, d: RouteData, o: RunOptio
   if (p[0] !== t.start) return { ok: false, kind: 'endpoints', title: 'Route starts in the wrong place', detail: `It should start at ${t.startName} (corner ${t.start}) but starts at corner ${p[0]}.` };
   if (p[p.length - 1] !== t.goal) return { ok: false, kind: 'endpoints', title: 'Route ends in the wrong place', detail: `It should end at ${t.goalName} (corner ${t.goal}) but ends at corner ${p[p.length - 1]}.` };
 
-  const closed = new Set(closedFor(t, d, o).flatMap(([a, b]) => [key(a, b), key(b, a)]));
+  const closed = new Set(t.closed.flatMap(([a, b]) => [key(a, b), key(b, a)]));
   for (let i = 1; i < p.length; i++) {
     const [a, b] = [p[i - 1], p[i]];
-    if (closed.has(key(a, b))) return { ok: false, kind: 'closed', title: 'Your route walks through a flooded street', detail: `The street between corners ${a} and ${b} is closed. Only use streets listed in graph[node].` };
+    if (closed.has(key(a, b))) return { ok: false, kind: 'closed', title: 'Your route uses a closed street', detail: `The street between corners ${a} and ${b} is closed. Only use streets listed in graph[node].` };
     if (!d.edgeLen.has(key(a, b))) return { ok: false, kind: 'gap', title: 'No street here', detail: `Corners ${a} and ${b} are next to each other in your route, but no street connects them.` };
   }
-  if (!exp.path.length) return { ok: false, kind: 'closed', title: 'This store is cut off', detail: 'Every street to the goal is closed, so the answer is [].' };
+  if (!exp.path.length) return { ok: false, kind: 'closed', title: 'This store can\'t be reached', detail: 'Every street to the goal is closed, so the answer is [].' };
 
   const m = pathMeters(p, d);
   if (m > exp.meters! + 0.5) return { ok: false, kind: 'longer', title: 'A shorter route exists', detail: `Your route is ${miles(m)} mi, a ${miles(exp.meters!)} mi route exists.` };

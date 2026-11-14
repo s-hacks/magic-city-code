@@ -143,7 +143,7 @@ export default function App() {
           level={level} unlocked={unlocked} run={run} compare={compare} hidden={hidden} theme={theme}
           editorRef={editor}
           onLevel={openLevel} onRun={doRun} onCompare={setCompare} onToggle={toggle}
-          onHome={() => setScreen('home')} onTheme={() => setTheme((t) => (t === 'night' ? 'day' : 'night'))}
+          onHome={() => setScreen('home')} onBack={() => { setListTab('practice'); setScreen('list'); }} onTheme={() => setTheme((t) => (t === 'night' ? 'day' : 'night'))}
         />
       )}
     </div>

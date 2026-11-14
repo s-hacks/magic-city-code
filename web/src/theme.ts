@@ -1,7 +1,7 @@
 // One source of truth for color: CSS variables and the map style both read from here.
 // Palette "Magic City After Dark": deep indigo night, a violet → blue → cyan brand gradient,
 // and three signal colors with fixed meaning everywhere:
-//   blue/cyan = explored by your code · gold = your route / lit · orange = problems & floods.
+//   blue/cyan = explored by your code · gold = your route / lit · orange = problems & repeated work.
 
 export type ThemeName = 'night' | 'day';
 

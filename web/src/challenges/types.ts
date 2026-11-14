@@ -15,11 +15,9 @@ export interface Verdict {
   line?: number; // editor line to underline
 }
 
-export interface RunOptions { flood: boolean }
-
 export interface Viz<T extends BaseTest> {
   /** Draw a test: start/goal, then (with a run) prepare the replay. Returns the number of replay steps. */
-  show(test: T, run: TestRun | null, verdict: Verdict | null, opts: RunOptions): number;
+  show(test: T, run: TestRun | null, verdict: Verdict | null): number;
   /** Jump the replay to step k (0..length). Returns the editor line for that step, or 0. */
   seek(k: number): number;
   /** Called when the replay reaches the end: draw the route / failure marks. */
@@ -40,8 +38,8 @@ export interface Challenge<D, T extends BaseTest> {
   /** Loads data; `raw` is handed to the Python harness as DATA_JSON. */
   load(): Promise<{ data: D; raw: string }>;
   tests(data: D): T[];
-  payload(tests: T[], data: D, opts: RunOptions): object;
-  check(test: T, run: TestRun, data: D, opts: RunOptions): Verdict;
+  payload(tests: T[], data: D): object;
+  check(test: T, run: TestRun, data: D): Verdict;
   Description: (p: { data: D }) => ReactNode;
   createViz(map: MLMap, data: D): Viz<T>;
 }

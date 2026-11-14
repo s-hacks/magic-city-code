@@ -10,7 +10,8 @@ export interface EditorHandle {
   getCode: () => string;
   setCode: (code: string) => void;
   insert: (text: string) => void;
-  mark: (line: number | null, kind: 'run' | 'error') => void;
+  /** Highlight a line. scroll=false keeps the view still (used during replay, where the line changes every frame). */
+  mark: (line: number | null, kind: 'run' | 'error', scroll?: boolean) => void;
 }
 
 // One effect sets (or clears) the highlighted line; the field turns it into a decoration.
@@ -83,13 +84,13 @@ export default function Editor({ initial, ref }: { initial: string; ref: Ref<Edi
       v.dispatch(v.state.replaceSelection(text));
       v.focus();
     },
-    mark: (line, kind) => {
+    mark: (line, kind, scroll = true) => {
       const v = view.current!;
       const k = `${line}:${kind}:${v.state.doc.length}`;
       if (k === lastMark.current) return; // replay calls this every frame
       lastMark.current = k;
       const effects: StateEffect<unknown>[] = [setMark.of(line ? { line, kind } : null)];
-      if (line && line <= v.state.doc.lines) effects.push(EditorView.scrollIntoView(v.state.doc.line(line).from, { y: 'nearest', yMargin: 40 }));
+      if (scroll && line && line <= v.state.doc.lines) effects.push(EditorView.scrollIntoView(v.state.doc.line(line).from, { y: 'nearest', yMargin: 40 }));
       v.dispatch({ effects });
     },
   }));
