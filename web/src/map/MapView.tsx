@@ -20,6 +20,8 @@
 //   onRunStep       ({ order, line } | null) => void   called as each beam drops; null clears
 //   onRunComplete   () => void   called ~0.9 s after residents flip (meter can fill then).
 //                   Also called at once when a Run has an error and nothing was placed.
+//   onRunCancel     () => void   a running animation was dropped because `result` (without a
+//                   new runToken) or `mission` changed; onRunComplete will NOT fire for it.
 //   dayMode         brighter map for washed-out projectors
 //   cameraPadding   pixels kept clear for floating panels when framing a mission
 //
@@ -29,6 +31,11 @@
 // then every 0.3 s a beam drops for the next hub (in `order`) and onRunStep fires;
 // after the last beam lands, residents switch to the new result's colors and the
 // served ones drift toward their hub; if the goal is met a gold wave sweeps out.
+// A new `result` without a new runToken, or a new mission, cancels a running
+// sequence and shows the new result at once.
+//
+// Hub labels: each beam shows "2 · Name". When labels would overlap on screen, the
+// later hub shows only its number; hovering a beam shows the full name.
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import maplibregl, { type Map as MlMap, type PaddingOptions } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -36,7 +43,7 @@ import { MapboxOverlay } from "@deck.gl/mapbox";
 import type { PickingInfo } from "@deck.gl/core";
 import type { Area, CityData, Mission, ResidentDot, Result, Site, SiteInfo, Store } from "@mcc/shared";
 import "./map.css";
-import { buildMapStyle, MAP_BACKGROUND } from "./mapStyle";
+import { buildMapStyle, isFallbackStyle, MAP_BACKGROUND } from "./mapStyle";
 import { palette } from "./theme";
 import { KIND_LABEL } from "./sprites";
 import { BHAM_CENTER, bboxCenter, bboxRadiusMeters, flyIn, flyToMission, runPushIn, type Bbox } from "./camera";
@@ -45,7 +52,7 @@ import { residentsLayer, type ResidentView } from "./layers/residents";
 import { storeLayers } from "./layers/stores";
 import { siteLayers } from "./layers/sites";
 import { hazeLayer, type HazeView } from "./layers/haze";
-import { DROP_MS, hubLayers, type TimedHub } from "./layers/hubs";
+import { DROP_MS, hubLayers, layoutHubLabels, type TimedHub } from "./layers/hubs";
 import { flareLayers, type Flare, type TimedFlare } from "./layers/flares";
 import { waveLayers, WAVE_MS, type Wave } from "./layers/wave";
 
@@ -72,6 +79,7 @@ export interface MapViewProps {
   onSiteClick?: (site: SiteInfo | Site) => void;
   onRunStep?: (step: RunStep | null) => void;
   onRunComplete?: () => void;
+  onRunCancel?: () => void;
   dayMode?: boolean;
   cameraPadding?: PaddingOptions;
 }
@@ -89,6 +97,8 @@ const FIRST_DROP = 200;
 const DROP_GAP = 300;
 const FLIP_AFTER_LAND = 150;
 const COMPLETE_AFTER_FLIP = 900;
+// Retry the real base map this long after falling back to a plain background.
+const STYLE_RETRY_MS = 10000;
 
 interface Tooltip {
   x: number;
@@ -105,6 +115,8 @@ interface ViewState {
   walkRadius: number;
   wave: Wave | null;
   running: boolean;
+  runResult: Result | null; // the result being animated while running
+  missionId: string | null;
   lastToken: number | undefined;
   timers: number[];
   flareBorn: Map<string, number>;
@@ -147,6 +159,8 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     walkRadius: 0,
     wave: null,
     running: false,
+    runResult: null,
+    missionId: props.mission?.id ?? null,
     lastToken: props.runToken,
     timers: [],
     flareBorn: new Map(),
@@ -199,9 +213,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       attributionControl: { compact: true },
     });
     mapRef.current = map;
-    buildMapStyle(day).then((s) => {
-      if (mapRef.current === map) map.setStyle(s, { diff: false });
-    });
+    applyStyle(day);
 
     const overlay = new MapboxOverlay({
       interleaved: false,
@@ -227,6 +239,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     return () => {
       cancelAnimationFrame(raf);
       vsRef.current.timers.forEach((t) => clearTimeout(t));
+      window.clearTimeout(styleRetry.current);
       overlay.finalize();
       map.remove();
       mapRef.current = null;
@@ -242,10 +255,28 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       firstStyle.current = false;
       return;
     }
+    applyStyle(!!props.dayMode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.dayMode]);
+
+  // Loads the night/day base style. If the tile server was unreachable we show a plain
+  // background and try once more in the background; a later toggle also retries.
+  const styleRetry = useRef(0);
+  const onFallback = useRef(true); // the map starts on a plain background
+  function applyStyle(day: boolean, isRetry = false) {
     const map = mapRef.current;
     if (!map) return;
-    buildMapStyle(!!props.dayMode).then((s) => mapRef.current === map && map.setStyle(s));
-  }, [props.dayMode]);
+    window.clearTimeout(styleRetry.current);
+    buildMapStyle(day).then((style) => {
+      if (mapRef.current !== map || !!propsRef.current.dayMode !== day) return; // stale
+      const fallback = isFallbackStyle(style);
+      if (fallback && onFallback.current && isRetry) return; // still offline, nothing to swap
+      // Diffing between unrelated styles (or before the first one loads) only warns.
+      map.setStyle(style, { diff: !onFallback.current && !fallback && !!map.isStyleLoaded() });
+      onFallback.current = fallback;
+      if (fallback && !isRetry) styleRetry.current = window.setTimeout(() => applyStyle(day, true), STYLE_RETRY_MS);
+    });
+  }
 
   // ---- Camera on mode / mission change ----
   const firstCam = useRef(true);
@@ -262,16 +293,24 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   useEffect(() => {
     const vs = vsRef.current;
     const result = props.result ?? null;
+    const missionId = props.mission?.id ?? null;
+    const missionChanged = missionId !== vs.missionId;
+    vs.missionId = missionId;
     const isNewRun = props.runToken !== undefined && props.runToken !== vs.lastToken;
     if (isNewRun) {
       vs.lastToken = props.runToken;
-      if (result) startRun(result);
-      return;
+      if (result) {
+        startRun(result);
+        return;
+      }
     }
-    if (vs.running) return; // same run, keep animating
+    if (vs.running) {
+      if (!missionChanged && result === vs.runResult) return; // same run, keep animating
+      cancelRun(); // new level / mission while animating: drop the old sequence
+    }
     commitNow(result);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.runToken, props.result]);
+  }, [props.runToken, props.result, props.mission?.id]);
 
   function clearTimers() {
     const vs = vsRef.current;
@@ -279,10 +318,22 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     vs.timers = [];
   }
 
+  /** Stop a running sequence without finishing it (no onRunComplete). */
+  function cancelRun() {
+    const vs = vsRef.current;
+    clearTimers();
+    vs.running = false;
+    vs.runResult = null;
+    vs.wave = null;
+    propsRef.current.onRunStep?.(null);
+    propsRef.current.onRunCancel?.();
+  }
+
   function commitNow(result: Result | null) {
     const vs = vsRef.current;
     clearTimers();
     vs.running = false;
+    vs.runResult = null;
     vs.committed = result;
     vs.hubs = result ? timedHubs(result, -1e7) : []; // already landed
     vs.walkRadius = result?.walkRadiusMeters ?? 0;
@@ -299,12 +350,14 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     if (!result.ok && result.placed.length === 0) {
       // An error: the map does not change.
       vs.running = false;
+      vs.runResult = null;
       p.onRunStep?.(null);
       p.onRunComplete?.();
       return;
     }
 
     vs.running = true;
+    vs.runResult = result;
     vs.wave = null;
     const start = performance.now();
     const bbox = missionBbox();
@@ -327,6 +380,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     });
     later(flipAt + COMPLETE_AFTER_FLIP, () => {
       vs.running = false;
+      vs.runResult = null;
       propsRef.current.onRunComplete?.();
     });
     later(flipAt + 250 + WAVE_MS + 100, () => (vs.wave = null));
@@ -355,6 +409,9 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
             sub: `${KIND_LABEL[s.kind]} · ${s.families_without_car.toLocaleString()} without a car · ${Math.round(s.minutes_to_store)} min walk to a store`,
           }
         : { x: info.x, y: info.y, title: site.name, sub: KIND_LABEL[site.kind] };
+    } else if (obj && (id === "hub-beam" || id === "hub-base-glow" || id === "hub-labels")) {
+      const h = (obj as { hub: TimedHub }).hub;
+      tip = { x: info.x, y: info.y, title: h.name, sub: `Hub ${h.order + 1} · ${KIND_LABEL[h.kind]}` };
     } else if (obj && id === "store-glow") {
       tip = { x: info.x, y: info.y, title: (obj as Store).name, sub: "Grocery store" };
     } else if (obj && (id === "flare-heads" || id === "flare-labels")) {
@@ -465,7 +522,14 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     }
 
     // Hub ground rings go under the residents; beams and labels go over them.
-    const hub = inMission && !comparing && vs.hubs.length ? hubLayers(vs.hubs, vs.walkRadius, ctx) : [];
+    let hub: ReturnType<typeof hubLayers> = [];
+    if (inMission && !comparing && vs.hubs.length) {
+      const fullLabel = layoutHubLabels(vs.hubs, (lon, lat) => {
+        const pt = map.project([lon, lat]);
+        return [pt.x, pt.y];
+      });
+      hub = hubLayers(vs.hubs, vs.walkRadius, ctx, fullLabel);
+    }
     const layers: any[] = [];
     if (vs.haze) layers.push(hazeLayer(vs.haze, ctx));
     layers.push(...hub.slice(0, 3));

@@ -1,8 +1,8 @@
 // Builds the MapLibre base style: OpenFreeMap "positron" restyled at load time.
 // Night = near-black navy land, steel-blue 3D buildings, muted roads, dim labels.
 // Day = the same layout in brighter colors for washed-out projectors.
-// If the tile server cannot be reached, a plain background style is used so the
-// deck.gl lights still show.
+// If the tile server cannot be reached (6 s timeout), a plain background style is
+// used so the deck.gl lights still show; MapView retries in the background.
 import type { StyleSpecification, LayerSpecification } from "maplibre-gl";
 
 const BASE_URL = "https://tiles.openfreemap.org/styles/positron";
@@ -70,13 +70,23 @@ const DAY_LOOK: Look = {
   textOpacity: 0.9,
 };
 
+const FETCH_TIMEOUT_MS = 6000;
+const FALLBACK_KEY = "mcc:fallback";
+
+// Only a successful (or still pending) fetch is kept. A failure clears the cache so
+// the next call (day/night toggle, background retry) tries the network again.
 let baseStyle: Promise<StyleSpecification | null> | null = null;
 
 function fetchBase(): Promise<StyleSpecification | null> {
   if (!baseStyle) {
-    baseStyle = fetch(BASE_URL)
+    const attempt: Promise<StyleSpecification | null> = fetch(BASE_URL, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
       .then((r) => (r.ok ? (r.json() as Promise<StyleSpecification>) : null))
-      .catch(() => null);
+      .catch(() => null)
+      .then((style) => {
+        if (!style && baseStyle === attempt) baseStyle = null;
+        return style;
+      });
+    baseStyle = attempt;
   }
   return baseStyle;
 }
@@ -157,7 +167,17 @@ function restyleLayer(layer: LayerSpecification, k: Look): LayerSpecification | 
 }
 
 function fallback(k: Look): StyleSpecification {
-  return { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": k.background } }] };
+  return {
+    version: 8,
+    metadata: { [FALLBACK_KEY]: true },
+    sources: {},
+    layers: [{ id: "background", type: "background", paint: { "background-color": k.background } }],
+  };
+}
+
+/** True for the plain background style used when the tile server could not be reached. */
+export function isFallbackStyle(style: StyleSpecification | null | undefined): boolean {
+  return !!(style?.metadata as Record<string, unknown> | undefined)?.[FALLBACK_KEY];
 }
 
 /** The restyled base map for night (default) or day. */
