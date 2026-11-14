@@ -1,9 +1,14 @@
-// App entry. Placeholder until mission-ui wires the real screens.
-import React from "react";
+// App entry: global styles, the router, and the shared app state.
 import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { App } from "./App";
+import { AppProvider } from "./mission/AppContext";
+import "./styles.css";
 
-function Placeholder() {
-  return <div style={{ color: "#fff", background: "#0b1020", height: "100vh", padding: 24 }}>Magic City Code — building…</div>;
-}
-
-createRoot(document.getElementById("root")!).render(<Placeholder />);
+createRoot(document.getElementById("root")!).render(
+  <BrowserRouter>
+    <AppProvider>
+      <App />
+    </AppProvider>
+  </BrowserRouter>,
+);

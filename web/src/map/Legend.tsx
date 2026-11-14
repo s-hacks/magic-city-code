@@ -18,6 +18,7 @@ export function Legend({ walkMinutes = 10, dayMode, showStores = true }: LegendP
   return (
     <div className="mcc-legend" role="note" aria-label="Map legend">
       <span className="item">{dot(p.residentFar, 10)} far from food</span>
+      <span className="item">{dot(p.residentMid, 12)} longer walk</span>
       <span className="item">
         {dot(p.residentNear, 14)} within a {walkMinutes}-minute walk <span className="note">(estimated)</span>
       </span>

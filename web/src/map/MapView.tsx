@@ -195,6 +195,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       zoom: 9.3,
       pitch: 0,
       maxPitch: 70,
+      preserveDrawingBuffer: true, // lets the Proposal page take a picture of the map
       attributionControl: { compact: true },
     });
     mapRef.current = map;
@@ -204,6 +205,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
 
     const overlay = new MapboxOverlay({
       interleaved: false,
+      deviceProps: { webgl: { preserveDrawingBuffer: true } }, // picture for the Proposal page
       layers: [],
       onHover: (info: PickingInfo) => handleHover(info),
       onClick: (info: PickingInfo) => handleClick(info),
