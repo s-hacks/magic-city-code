@@ -36,6 +36,8 @@ code { font-family: var(--mono); background: color-mix(in srgb, var(--text) 8%, 
 .mission-panel > .btn { align-self: flex-start; }
 
 /* ---------- code panel extras ---------- */
+.code-head { gap: 12px; }
+.code-head > * { white-space: nowrap; }
 .output { max-height: 30%; overflow-y: auto; }
 .out-pre { margin: 0; white-space: pre-wrap; font: inherit; color: var(--muted); }
 .out-success { color: var(--accent); font-family: var(--sans); font-weight: 700; font-size: 16px; }

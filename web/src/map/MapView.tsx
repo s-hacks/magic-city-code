@@ -191,11 +191,11 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     const p = propsRef.current;
     const bbox = missionBbox();
     if (p.mode === "mission" && bbox) flyToMission(map, bbox, padding());
-    else flyIn(map);
+    else flyIn(map, p.cameraPadding);
   };
 
   useImperativeHandle(ref, () => ({
-    flyIn: () => mapRef.current && flyIn(mapRef.current),
+    flyIn: () => mapRef.current && flyIn(mapRef.current, propsRef.current.cameraPadding),
     flyToMission: () => {
       const bbox = missionBbox();
       if (mapRef.current && bbox) flyToMission(mapRef.current, bbox, padding());
