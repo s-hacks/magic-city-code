@@ -50,7 +50,7 @@
       "instructions": "Writing `city.place_hub` 5 times is slow. A loop does the same job again and again for you. `city.sites()` gives you a list of places. Use a `for` loop to place a free Wi-Fi study spot at the first 5 places on the list. Then press Run.",
       "goal": {
         "metric": "coverage",
-        "target": 0.29
+        "target": 0.28
       },
       "maxPlacements": 5,
       "starterCode": "# Level 2: place 5 free Wi-Fi study spots with a loop\nplaces = city.sites()\nprint(\"There are\", len(places), \"places to choose from.\")\n\n# Your turn: use a for loop to place a free Wi-Fi study spot at the first 5 places.\n",
@@ -68,7 +68,7 @@
       "instructions": "The first 5 places on the list are not always the best ones. Each place has `families_nearby`. Here that means households with no internet at home within a 10-minute walk. Sort the places so the biggest number comes first. Then pick 5 free Wi-Fi study spots from the top. One catch: the top places are often right next to each other, and two free Wi-Fi study spots side by side help the same households. Skip a place if both its `lat` and its `lon` are less than 0.01 away from a place you already picked. Then press Run.",
       "goal": {
         "metric": "coverage",
-        "target": 0.45
+        "target": 0.46
       },
       "maxPlacements": 5,
       "starterCode": "# Level 4: sort, then choose\nplaces = city.sites()\nchosen = []   # the places you pick will go in here\n\n# Step 1: sort places so the most families_nearby come first.\n# Step 2: go down the sorted list. Pick a place unless it is\n#         too close to one in chosen. Stop at 5.\n# Remember to call city.place_hub for each place you pick.\n",
