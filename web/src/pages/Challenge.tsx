@@ -1,5 +1,5 @@
 // Challenge page (from the UI prototype): problem statement + editor on the left, the
-// map replay and test results in the middle, and Sparks, the AI coding coach, on the right.
+// map replay and test results on the right. Sparks, the AI coding coach, is docked in the code card.
 // Run checks the visible tests, Submit the hidden ones.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -40,8 +40,8 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
   const [len, setLen] = useState(0);
   const [playing, setPlaying] = useState(false);
   const draftKey = `draft:${ch.id}`;
-  // Sparks starts open when there is room for a third column.
-  const [agent, setAgent] = useState(() => window.innerWidth >= 1280);
+  // Sparks' chat history: collapsed to its latest reply until the student asks something.
+  const [agent, setAgent] = useState(false);
   const [ask, setAsk] = useState<{ action: ChallengeCoachAction; n: number } | null>(null);
   const askSparks = (action: ChallengeCoachAction) => { setAgent(true); setAsk((a) => ({ action, n: (a?.n ?? 0) + 1 })); };
 
@@ -195,14 +195,14 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
   const passed = rows.filter((r) => r.verdict?.ok).length;
 
   return (
-    <div className="challenge" data-agent={agent ? 'open' : undefined}>
+    <div className="challenge">
       <header className="cbar">
         <button className="brand link" onClick={onHome} title="Home (H)"><Mark /> Magic City Code</button>
         <div className="ctitle">
           <button className="crumb link-btn quiet" onClick={onList}>Challenges /</button> {ch.title}
           <span className={`diff ${ch.difficulty.toLowerCase()}`}>{ch.difficulty}</span>
         </div>
-        <button className="btn ghost small agent-toggle" aria-pressed={agent} onClick={() => setAgent((a) => !a)} title="Sparks, your AI coding coach">✦ Sparks</button>
+        <button className="btn ghost small agent-toggle" aria-pressed={agent} onClick={() => setAgent((a) => !a)} title="Show or hide the chat with Sparks, your AI coding coach">✦ Sparks</button>
         <button className="icon-btn" onClick={onTheme} title="Projector mode (D)" aria-label="Toggle projector mode">{theme === 'night' ? '☀' : '☾'}</button>
       </header>
 
@@ -231,6 +231,17 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
               {busy === 'submit' ? <i className="spin" /> : null} Submit
             </button>
           </div>
+          <CoachPanel
+            challengeId={ch.id}
+            conceptLabel={CONCEPT[ch.id] ?? 'Explain the idea'}
+            getCode={() => editor.current?.getCode() ?? ''}
+            verdict={cur?.verdict ? { ...cur.verdict, testName: cur.test.visible || cur.verdict ? cur.test.name : undefined } : null}
+            flood={flood}
+            trigger={ask}
+            onLine={(n) => editor.current?.mark(n, 'run')}
+            open={agent}
+            onOpen={setAgent}
+          />
         </div>
       </section>
 
@@ -293,18 +304,6 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
         </div>
       </section>
 
-      {agent && (
-        <CoachPanel
-          challengeId={ch.id}
-          conceptLabel={CONCEPT[ch.id] ?? 'Explain the idea'}
-          getCode={() => editor.current?.getCode() ?? ''}
-          verdict={cur?.verdict ? { ...cur.verdict, testName: cur.test.visible || cur.verdict ? cur.test.name : undefined } : null}
-          flood={flood}
-          trigger={ask}
-          onLine={(n) => editor.current?.mark(n, 'run')}
-          onClose={() => setAgent(false)}
-        />
-      )}
     </div>
   );
 }

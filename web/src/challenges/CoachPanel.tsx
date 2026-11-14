@@ -1,4 +1,6 @@
-// Sparks, the AI coding coach beside the challenge editor. It sees the student's current code,
+// Sparks, the AI coding coach docked inside the challenge's code card, under Run / Submit.
+// Collapsed it shows Sparks' latest reply, the quick actions and the question box; expanded it
+// shows the whole chat (the editor gives up some height). It sees the student's current code,
 // the test they are looking at and the chat so far, and streams a reply from
 // POST /api/challenges/:id/coach (Claude on the server, stored hints when it is off).
 // It explains, reviews and hints; it never writes the solution (the server enforces that too).
@@ -21,12 +23,13 @@ interface Props {
   /** Ask from outside the panel (e.g. "Ask Sparks why" under a failing test). Bump `n` to send. */
   trigger: { action: ChallengeCoachAction; n: number } | null;
   onLine: (line: number) => void;
-  onClose: () => void;
+  open: boolean; // chat history expanded
+  onOpen: (open: boolean) => void;
 }
 
 const HINTS = 3;
 
-export default function CoachPanel({ challengeId, conceptLabel, getCode, verdict, flood, trigger, onLine, onClose }: Props) {
+export default function CoachPanel({ challengeId, conceptLabel, getCode, verdict, flood, trigger, onLine, open, onOpen }: Props) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [hints, setHints] = useState(0);
   const [question, setQuestion] = useState('');
@@ -42,6 +45,8 @@ export default function CoachPanel({ challengeId, conceptLabel, getCode, verdict
     if (el) el.scrollTop = el.scrollHeight;
   }, [msgs]);
 
+  const input = useRef<HTMLInputElement>(null);
+
   async function send(action: ChallengeCoachAction, typed?: string) {
     const { msgs: past, hints: given, busy: running, verdict: v, flood: f } = latest.current;
     if (running) return;
@@ -52,6 +57,7 @@ export default function CoachPanel({ challengeId, conceptLabel, getCode, verdict
     setMsgs([...past, { role: 'student', text: label, label }, { role: 'coach', text: '', pending: true }]);
     setQuestion('');
     setBusy(true);
+    onOpen(true); // show the answer as it streams
     const ctl = new AbortController();
     abort.current = ctl;
     const setLast = (patch: Partial<Msg>) => setMsgs((m) => [...m.slice(0, -1), { ...m[m.length - 1], ...patch }]);
@@ -78,18 +84,23 @@ export default function CoachPanel({ challengeId, conceptLabel, getCode, verdict
   }, [trigger?.n]);
 
   const failing = !!verdict && !verdict.ok;
+  const lastCoach = [...msgs].reverse().find((m) => m.role === 'coach');
   return (
-    <aside className="agent card" aria-label="Sparks, your AI coding coach">
-      <header className="agent-head">
+    <section className="agent-dock" data-open={open || undefined} aria-label="Sparks, your AI coding coach">
+      <button type="button" className="agent-bar" onClick={() => onOpen(!open)} aria-expanded={open}>
         <Spark />
-        <div className="agent-title">
-          <strong>Sparks</strong>
-          <span className="tiny">AI coding coach · sees your code and tests</span>
-        </div>
-        <button className="icon-btn" onClick={onClose} aria-label="Close Sparks" title="Close">×</button>
-      </header>
+        <span className="agent-title">
+          <strong>Sparks</strong> <span className="tiny">AI coach</span>
+        </span>
+        {!open && (
+          <span className="agent-peek">
+            {lastCoach ? (lastCoach.text || 'Thinking…') : failing ? 'A test failed. Want me to explain it?' : 'Stuck? Ask me about your code.'}
+          </span>
+        )}
+        <span className="agent-chev" aria-hidden>{open ? '▾' : '▴'}</span>
+      </button>
 
-      <div className="agent-msgs" ref={list} aria-live="polite">
+      {open && <div className="agent-msgs" ref={list} aria-live="polite">
         {msgs.length === 0 && (
           <div className="agent-empty">
             <p>Hi! I'm Sparks. I can read your code and your test results, explain what went wrong, and give you the next step.</p>
@@ -101,7 +112,7 @@ export default function CoachPanel({ challengeId, conceptLabel, getCode, verdict
             {m.role === 'coach' ? (m.text ? <Rich text={m.text} onLine={onLine} /> : <span className="agent-typing" aria-label="Sparks is thinking"><i /><i /><i /></span>) : m.text}
           </div>
         ))}
-      </div>
+      </div>}
 
       <div className="agent-actions">
         <button className="chip-btn" disabled={busy || !verdict} onClick={() => send('explain-failure')} title={verdict ? '' : 'Run the tests first'}>
@@ -114,6 +125,7 @@ export default function CoachPanel({ challengeId, conceptLabel, getCode, verdict
 
       <form className="agent-input" onSubmit={(e) => { e.preventDefault(); send('chat', question); }}>
         <input
+          ref={input}
           value={question}
           maxLength={500}
           onChange={(e) => setQuestion(e.target.value)}
@@ -126,7 +138,7 @@ export default function CoachPanel({ challengeId, conceptLabel, getCode, verdict
           <button className="btn primary small" disabled={!question.trim()}>Send</button>
         )}
       </form>
-    </aside>
+    </section>
   );
 }
 
