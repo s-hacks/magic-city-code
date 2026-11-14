@@ -48,7 +48,7 @@
       "instructions": "Writing `city.place_hub` 5 times is slow. A loop does the same job again and again for you. `city.sites()` gives you a list of places. Use a `for` loop to place a pickup hub at the first 5 places on the list. Then press Run.",
       "goal": {
         "metric": "coverage",
-        "target": 0.33
+        "target": 0.34
       },
       "maxPlacements": 5,
       "starterCode": "# Level 2: place 5 pickup hubs with a loop\nplaces = city.sites()\nprint(\"There are\", len(places), \"places to choose from.\")\n\n# Your turn: use a for loop to place a pickup hub at the first 5 places.\n",
