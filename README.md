@@ -10,9 +10,9 @@ cp .env.example .env        # optional: add ANTHROPIC_API_KEY. The app works off
 pnpm dev
 ```
 
-`pnpm dev` runs the web app and the server in parallel. The web app's `predev` step copies Pyodide into `web/public/pyodide/` first.
+`pnpm dev` runs the web app, the landing page and the server in parallel (`pnpm dev:app` skips the landing page). The web app's `predev` step copies Pyodide into `web/public/pyodide/` first.
 
-Open **http://localhost:5173**.
+Open **http://localhost:5173** for the app. The landing page is a separate site on **http://localhost:5180**; its links go to the app (set `VITE_APP_URL` to point them at a deployed app).
 
 Demo shortcuts:
 - **Ctrl+Shift+1 / 2 / 3** types the prepared solution for level 1, 2 or 3.

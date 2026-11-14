@@ -1,16 +1,15 @@
 // Missions stage: the real mission list. Seed and approved resident missions come from the
 // server (or the static files when it is away) and the code challenges from
 // src/challenges. Each card opens a detail view; Start opens the mission screen
-// (/mission/:id) or the challenge page (/challenge/:id).
+// (/mission/:id) or the challenge page (/challenge/:id) in the app (see appUrl.ts).
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { flushSync } from 'react-dom';
-import { Link } from 'react-router-dom';
-import type { Mission as MissionConfig } from '@mcc/shared';
+import { appHref } from '../appUrl';
+import type { Mission as MissionConfig, Neighborhood } from '@mcc/shared';
 import type { StageProps } from '../Landing';
 import { Arrow } from '../Landing';
 import { city, partners } from '../facts';
-import { useApp } from '../../mission/AppContext';
-import { listMissionSummaries } from '../../mission/api';
+import { fetchMission, listMissionSummaries } from '../../mission/api';
 import { challenges } from '../../challenges';
 import './missions.css';
 
@@ -58,21 +57,22 @@ const challengeCards: Card[] = Object.values(challenges).map((c) => ({
 
 /** Every playable mission and challenge, for the cards. */
 function useCards(): Card[] | null {
-  const { data, getMission } = useApp();
   const [configs, setConfigs] = useState<MissionConfig[] | null>(null);
+  const [hoods, setHoods] = useState<Neighborhood[]>([]);
   useEffect(() => {
     let live = true;
     listMissionSummaries()
-      .then((list) => Promise.all(list.map((s) => getMission(s.id))))
+      .then((list) => Promise.all(list.map((s) => fetchMission(s.id))))
       .then((ms) => live && setConfigs(ms.filter((m): m is MissionConfig => !!m)))
       .catch(() => live && setConfigs([]));
+    fetch('/data/neighborhoods.json').then((r) => r.json()).then((n) => live && setHoods(n), () => {});
     return () => { live = false; };
-  }, [getMission]);
+  }, []);
   return useMemo(() => {
     if (!configs) return null;
-    const hood = (id: string) => data?.neighborhoods.find((n) => n.id === id)?.name ?? titleCase(id);
+    const hood = (id: string) => hoods.find((n) => n.id === id)?.name ?? titleCase(id);
     return [...configs.map((m) => missionCard(m, hood(m.area.neighborhood))), ...challengeCards];
-  }, [configs, data]);
+  }, [configs, hoods]);
 }
 
 // Shared-element morph via View Transitions; plain state swap where unsupported.
@@ -158,9 +158,9 @@ export default function Missions({ active, go }: StageProps) {
         <div className="ms-cta lp-in" style={v({ '--d': 7 })}>
           <p className="ms-cta-line">Open {first?.place ?? 'a neighborhood'} and <span className="lp-accent">light it up.</span></p>
           <div className="ms-cta-btns">
-            {first && <Link className="lp-btn primary" to={first.href}>Start {first.title} <Arrow /></Link>}
-            <Link className="lp-btn ghost" to="/challenges">All challenges</Link>
-            <Link className="lp-btn ghost" to="/city">Open the city map</Link>
+            {first && <a className="lp-btn primary" href={appHref(first.href)}>Start {first.title} <Arrow /></a>}
+            <a className="lp-btn ghost" href={appHref("/challenges")}>All challenges</a>
+            <a className="lp-btn ghost" href={appHref("/")}>Open the app</a>
             <button className="lp-btn ghost" onClick={() => go('hero')}>Back to the city</button>
           </div>
         </div>
@@ -198,7 +198,7 @@ export default function Missions({ active, go }: StageProps) {
                   ))}
                 </ol>
               )}
-              <Link className="lp-btn primary" to={m.href}>{m.kind === 'Route' ? 'Open the challenge' : `Start ${m.title}`} <Arrow /></Link>
+              <a className="lp-btn primary" href={appHref(m.href)}>{m.kind === 'Route' ? 'Open the challenge' : `Start ${m.title}`} <Arrow /></a>
             </div>
           </div>
         )}

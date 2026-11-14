@@ -3,11 +3,14 @@
   "private": true,
   "description": "Kids learn to code by fixing their own city.",
   "scripts": {
-    "dev": "pnpm -r --parallel --filter ./web --filter ./server dev",
+    "dev": "pnpm -r --parallel --filter ./web --filter ./server run \"/^dev(:landing)?$/\"",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "dev:app": "pnpm -r --parallel --filter ./web --filter ./server dev"
   },
-  "engines": { "node": ">=20.17" },
+  "engines": {
+    "node": ">=20.17"
+  },
   "packageManager": "pnpm@9.15.9"
 }

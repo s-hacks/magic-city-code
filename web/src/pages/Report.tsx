@@ -74,7 +74,7 @@ export function Report() {
     <div className="app" data-screen="report">
       <MapView mode="home" data={data} flares={flares} dayMode={dayMode} cameraPadding={{ top: 90, bottom: 60, left: 60, right: 700 }} />
       <div className="vignette" aria-hidden />
-      <TopBar actions={<Link className="btn ghost" to="/city">← Back to the city</Link>} />
+      <TopBar actions={<Link className="btn ghost" to="/">← Back to the city</Link>} />
       <div className="report glass">
         {(phase.k === "form" || phase.k === "error") && (
           <>

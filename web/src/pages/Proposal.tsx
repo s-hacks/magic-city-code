@@ -87,7 +87,7 @@ export function ProposalPage() {
         <div className="center-card glass">
           <h2>No proposal here yet</h2>
           <p className="muted">Finish a level, then press “Make a proposal”.</p>
-          <Link className="btn primary" to="/city">Back to the city</Link>
+          <Link className="btn primary" to="/">Back to the city</Link>
         </div>
       </div>
     );

@@ -20,7 +20,7 @@ export function TopBar({ children, actions }: { children?: ReactNode; actions?: 
       if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
       const k = e.key.toLowerCase();
       if (k === "d") toggleDay();
-      if (k === "h") nav("/#missions");
+      if (k === "h") nav("/");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

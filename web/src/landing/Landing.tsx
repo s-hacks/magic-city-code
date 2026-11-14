@@ -1,8 +1,7 @@
 // Landing: the first page. Five full-screen stages (city, the loop, try it, Birmingham data,
 // missions); the Missions stage lists every real mission and opens it in the app.
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
-import { Link } from 'react-router-dom';
-import './landing.css';
+import { appHref } from './appUrl';
 
 export interface StageProps {
   active: boolean; // true while this stage is on screen; pause loops/WebGL when false
@@ -96,7 +95,7 @@ export default function Landing() {
           <span key={cur} className="lp-count-n">{String(i + 1).padStart(2, '0')}</span>
           <span className="lp-count-of">/ {String(ids.length).padStart(2, '0')}</span>
         </div>
-        <Link className="lp-btn primary" to="/city">Open the app <Arrow /></Link>
+        <a className="lp-btn primary" href={appHref("/")}>Open the app <Arrow /></a>
       </header>
 
       <main id="stage" className="lp-stages" style={{ '--ox': `${origin.x}%`, '--oy': `${origin.y}%` } as React.CSSProperties}>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as RKE } from 'react';
-import { Link } from 'react-router-dom';
+import { appHref } from '../appUrl';
 import type { StageProps } from '../Landing';
 import { Arrow } from '../Landing';
 import { levels } from '../facts';
@@ -344,7 +344,7 @@ export default function Play({ active, go }: StageProps) {
       </div>
 
       <div className="pl-cta lp-in" style={{ '--d': 4 } as React.CSSProperties}>
-        <Link className="lp-btn primary" to="/mission/feed-the-block">Open the full mission <Arrow /></Link>
+        <a className="lp-btn primary" href={appHref("/mission/feed-the-block")}>Open the full mission <Arrow /></a>
         <button className="lp-btn ghost" onClick={() => go('data')}>See the data behind it</button>
       </div>
     </div>

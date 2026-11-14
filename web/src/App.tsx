@@ -1,5 +1,4 @@
-// Routes: / (landing: the mission list), /city (the city map with problem flares),
-// /challenges (practice list + city problems), /report, /mission/:id, /challenge/:id, /proposal/:id.
+// Routes: / (home: the city map with problem flares), /challenges (practice list + city problems), /report, /mission/:id, /challenge/:id, /proposal/:id.
 // Visiting /?reset=1 wipes this app's saved state (demo reset) and returns to /.
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -10,8 +9,8 @@ import { ProposalPage } from "./pages/Proposal";
 import { useApp } from "./mission/AppContext";
 import { challenges } from "./challenges";
 
-// The landing (three.js) and the challenge page (its own Pyodide worker) load on demand.
-const Landing = lazy(() => import("./landing/Landing"));
+// The landing page is a separate site (landing.html, its own port). The challenge pages
+// (their own Pyodide worker) load on demand.
 const ChallengePage = lazy(() => import("./pages/Challenge"));
 const ChallengeList = lazy(() => import("./pages/ChallengeList"));
 
@@ -36,7 +35,7 @@ function ChallengeRoute() {
   const ch = challenges[id as keyof typeof challenges];
   if (!ch) return <Navigate to="/" replace />;
   // The registry mixes challenge data types; the page is generic over them.
-  return <ChallengePage ch={ch as Parameters<typeof import("./pages/Challenge").default>[0]["ch"]} theme={dayMode ? "day" : "night"} onHome={() => nav("/#missions")} onList={() => nav("/challenges")} onTheme={toggleDay} />;
+  return <ChallengePage ch={ch as Parameters<typeof import("./pages/Challenge").default>[0]["ch"]} theme={dayMode ? "day" : "night"} onHome={() => nav("/")} onList={() => nav("/challenges")} onTheme={toggleDay} />;
 }
 
 function clearKeys(store: Storage) {
@@ -80,8 +79,8 @@ export function App() {
   return (
     <Suspense fallback={<div className="app" />}>
     <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/city" element={<Home />} />
+      <Route path="/" element={<Home />} />
+      <Route path="/city" element={<Navigate to="/" replace />} />
       <Route path="/challenges" element={<ChallengesRoute />} />
       <Route path="/challenge/:id" element={<ChallengeRoute />} />
       <Route path="/report" element={<Report />} />
