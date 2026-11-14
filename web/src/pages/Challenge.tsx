@@ -321,6 +321,10 @@ const CONCEPT: Record<string, string> = {
   'stray-dog-van': 'Explain nearest neighbor',
   'water-bill-check': 'Explain streaks',
   'open-bed': 'Explain the rules',
+  'stop-the-leaks': 'Explain gallons per hour of work',
+  'grocery-gap': 'Explain greedy picking',
+  'flood-cutoff': 'Explain multi-source Dijkstra',
+  'dont-get-trapped-1': 'Explain breadth-first search',
 };
 
 /** Route to Fresh Food's legend, the default. */

@@ -6,3 +6,5 @@ export * from "./api";
 export * from "./challenges";
 export * from "./cityProblems";
 export * from "./practiceChallenges";
+export * from "./demoChallenges";
+export * from "./trappedChallenge";

@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import type { Project } from "@mcc/shared";
 import type { FromProjectWorker, ToProjectWorker } from "./project.worker";
+import type { MapLayer } from "./mapData";
 
 export const HARD_LIMIT_MS = 10_000;
 
@@ -14,7 +15,8 @@ export interface PyError {
   message: string;
   trace: string;
 }
-export interface RunResult { ok: boolean; ms: number; error?: PyError }
+/** map: what the program drew with mapview (kept even when it crashed later). */
+export interface RunResult { ok: boolean; ms: number; error?: PyError; map?: MapLayer[] }
 export interface TestResult { name: string; file: string; line: number | null; ok: boolean; message?: string; ms: number }
 export interface TestsResult { results: TestResult[]; passed: number; total: number; ms: number }
 export type Outcome<T> = { kind: "done"; result: T } | { kind: "timeout" } | { kind: "failed"; message: string };

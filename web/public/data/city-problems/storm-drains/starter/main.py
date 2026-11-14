@@ -12,3 +12,10 @@ ranked = rank_inlets(reports, inlets)
 print("Clear these first:")
 for inlet_id in ranked[:5]:
     print(" ", inlet_id, inlets[inlet_id]["street"])
+
+# --- The map: the inlets to clear first, numbered in order ---------------------------
+import mapview
+
+first = [{"inlet_id": i, **inlets[i]} for i in ranked[:5] if i in inlets]
+mapview.highlight(first, label="inlet_id", name="clear first")
+mapview.note("Clear first: " + ", ".join(ranked[:5]) if ranked else "Write rank_inlets() and your picks light up here.")

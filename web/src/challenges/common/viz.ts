@@ -32,20 +32,23 @@ export function markerSet(map: MLMap) {
   };
 }
 
-export function fit(map: MLMap, points: LngLat[], maxZoom = 15.5) {
+export function fit(map: MLMap, points: LngLat[], maxZoom = 15.5, pitch = 40) {
   if (!points.length) return;
   const b = new maplibregl.LngLatBounds(points[0], points[0]);
   points.forEach((p) => b.extend(p));
-  map.fitBounds(b, { padding: { top: 90, bottom: 110, left: 70, right: 70 }, pitch: 40, bearing: -10, duration: 1100, maxZoom });
+  map.fitBounds(b, { padding: { top: 90, bottom: 110, left: 70, right: 70 }, pitch, bearing: -10, duration: 1100, maxZoom });
 }
 
 /** Add GeoJSON sources + layers; returns a setter and a cleanup. */
 export function layers(map: MLMap, sources: string[], specs: maplibregl.LayerSpecification[]) {
   for (const id of sources) map.addSource(id, { type: 'geojson', data: fc([]) });
   specs.forEach((l) => map.addLayer(l));
+  // A hot reload or a fast page change can remove the map first; then there is nothing to update.
+  const alive = () => !!(map as unknown as { style?: unknown }).style;
   return {
-    set: (id: string, features: Feature[]) => (map.getSource(id) as GeoJSONSource | undefined)?.setData(fc(features)),
+    set: (id: string, features: Feature[]) => { if (alive()) (map.getSource(id) as GeoJSONSource | undefined)?.setData(fc(features)); },
     destroy() {
+      if (!alive()) return;
       specs.forEach((l) => map.getLayer(l.id) && map.removeLayer(l.id));
       sources.forEach((id) => map.getSource(id) && map.removeSource(id));
     },

@@ -276,6 +276,17 @@ export function buildStarter(input: StarterInput): Project {
     "",
     "Write your answer in `solve()` in `main.py`, then explain your approach when you submit.",
     "",
+    "## The map",
+    "",
+    "The map next to the editor shows every row in a data file that has `lat` and `lon` columns. To draw your answer on it, use `mapview` in `main.py`:",
+    "",
+    "- `mapview.highlight(rows, label=\"name\")` lights up your picks, numbered in order.",
+    "- `mapview.points(rows, color=\"cyan\")` adds plain dots.",
+    "- `mapview.route(stops)` draws a line through the stops, in order.",
+    "- `mapview.note(\"text\")` puts a caption on the map.",
+    "",
+    "Each row is a dict with `lat` and `lon`, or a `(lat, lon)` pair. With **Live** on, the map redraws a moment after you stop typing.",
+    "",
   ].join("\n");
 
   const mainPy = [

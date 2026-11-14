@@ -21,6 +21,8 @@ import {
 import { HARD_LIMIT_MS, pythonLoadError, runProject, testProject, usePyStatus, type Outcome, type PyError, type TestsResult } from "../workspace/pyProject";
 import { hintFor } from "../workspace/hints";
 import "../workspace/workspace.css";
+import MapPreview, { type MapState } from "../workspace/MapPreview";
+import type { MapLayer } from "../workspace/mapData";
 
 type Line = { kind: "out" | "err" | "info" | "ok" | "bad"; text: string; error?: PyError };
 interface Draft { project: Project; savedAt: string }
@@ -55,6 +57,11 @@ export default function WorkspacePage({ mode }: { mode: "solve" | "review" }) {
   const [tests, setTests] = useState<(TestsResult & { official: boolean }) | null>(null);
   const [busy, setBusy] = useState<false | "run" | "tests">(false);
   const [lastError, setLastError] = useState<PyError | null>(null);
+  // The live map: open on wide screens; in solve mode it re-runs main.py as you type.
+  const [mapOpen, setMapOpen] = useState(() => local.get("mcc.ws.map", window.innerWidth >= 1100));
+  const [live, setLive] = useState(() => local.get("mcc.ws.live", true));
+  const [mapLayers, setMapLayers] = useState<MapLayer[]>([]);
+  const [mapRun, setMapRun] = useState<{ project: Project | null; ok: boolean } | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [canReview, setCanReview] = useState(false);
@@ -201,21 +208,27 @@ export default function WorkspacePage({ mode }: { mode: "solve" | "review" }) {
 
   const timeoutLine = (): Line => ({ kind: "bad", text: `Stopped after ${HARD_LIMIT_MS / 1000} seconds. Is there a loop that never ends? Python is restarting…` });
 
-  const run = async () => {
+  /** Run the entry file. A live run (quiet) doesn't switch panels or jump to the error. */
+  const run = async (quiet = false) => {
     if (!project || busy || py === "failed" || !runnable) return;
+    const ran = project;
     setBusy("run");
-    setPanel("output");
+    if (!quiet) setPanel("output");
     setLastError(null);
-    setLines([{ kind: "info", text: `▶ python ${entry}` }]);
-    const o = await runProject({ ...project, entry }, stream);
+    setLines([{ kind: "info", text: `▶ python ${entry}${quiet ? "  (live)" : ""}` }]);
+    const o = await runProject({ ...ran, entry }, stream);
     setBusy(false);
-    if (o.kind === "timeout") return out(timeoutLine());
-    if (o.kind === "failed") return out({ kind: "bad", text: `Python stopped: ${o.message}` });
+    if (o.kind !== "done") {
+      setMapRun({ project: ran, ok: false });
+      return out(o.kind === "timeout" ? timeoutLine() : { kind: "bad", text: `Python stopped: ${o.message}` });
+    }
+    setMapLayers(o.result.map ?? []);
+    setMapRun({ project: ran, ok: o.result.ok });
     if (o.result.ok) out({ kind: "ok", text: `✓ Finished in ${o.result.ms} ms` });
     else if (o.result.error) {
       setLastError(o.result.error);
       out({ kind: "bad", text: `${o.result.error.type}: ${o.result.error.message}`, error: o.result.error });
-      if (o.result.error.file && o.result.error.line) open(o.result.error.file, o.result.error.line);
+      if (!quiet && o.result.error.file && o.result.error.line) open(o.result.error.file, o.result.error.line);
     }
   };
 
@@ -242,6 +255,20 @@ export default function WorkspacePage({ mode }: { mode: "solve" | "review" }) {
   // ⌘↵ run, ⌘⇧↵ tests, ⌘S save now
   const keys = useRef({ run, runTests });
   keys.current = { run, runTests };
+
+  // Live map: run main.py once Python is ready, then again ~0.9 s after each edit stops.
+  // A change made while a run is going waits for it, then runs once more.
+  const liveOn = mapOpen && (readOnly || live);
+  const stale = !!project && mapRun?.project !== project;
+  useEffect(() => {
+    if (!liveOn || !stale || py !== "ready" || busy) return;
+    const t = setTimeout(() => void keys.current.run(true), mapRun ? 900 : 0);
+    return () => clearTimeout(t);
+  }, [liveOn, stale, py, busy, project, mapRun]);
+  // Remember the reader's own choices only (not the default picked from the window width).
+  const toggleMap = (on: boolean) => { setMapOpen(on); local.set("mcc.ws.map", on); };
+  const toggleLive = (on: boolean) => { setLive(on); local.set("mcc.ws.live", on); };
+  const mapState: MapState = busy === "run" ? "running" : !mapRun ? "idle" : stale ? "stale" : mapRun.ok ? "ok" : "error";
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return;
@@ -290,7 +317,10 @@ export default function WorkspacePage({ mode }: { mode: "solve" | "review" }) {
         <div className="center-card glass ws-missing">
           <h2>{loadErr ?? "This sample solution has a write-up but no code"}</h2>
           {!loadErr && solution && <p className="muted">{solution.approach}</p>}
-          <button className="btn primary" onClick={() => (problem ? back() : nav("/challenges?tab=city"))}>← Back to the problem</button>
+          <div className="row">
+            {loadErr && <button className="btn ghost" onClick={() => window.location.reload()}>Try again</button>}
+            <button className="btn primary" onClick={() => (problem ? back() : nav("/challenges?tab=city"))}>← Back to the problem</button>
+          </div>
         </div>
       </div>
     );
@@ -300,7 +330,7 @@ export default function WorkspacePage({ mode }: { mode: "solve" | "review" }) {
   const solved = problem?.status === "Solved";
 
   return (
-    <div className="ws" data-side={side}>
+    <div className="ws" data-side={side} data-map={mapOpen ? "open" : undefined}>
       <header className="cbar ws-bar">
         <button className="brand link" onClick={() => nav("/")} title="Home"><Mark /> Magic City Code</button>
         <div className="ctitle ws-crumbs">
@@ -312,7 +342,7 @@ export default function WorkspacePage({ mode }: { mode: "solve" | "review" }) {
         {mode === "solve" ? (
           <>
             <button className="btn ghost small" onClick={startOver} title="Go back to the starter project">Start over</button>
-            <button className="btn ghost" disabled={!!busy || py === "failed" || !runnable} onClick={run} title={`Run ${entry} (⌘↵)`}>
+            <button className="btn ghost" disabled={!!busy || py === "failed" || !runnable} onClick={() => run()} title={`Run ${entry} (⌘↵)`}>
               {busy === "run" ? <i className="spin" /> : "▶"} Run <span className="ws-entry">{baseName(entry)}</span>
             </button>
             <button className="btn ghost" disabled={!!busy || py === "failed"} onClick={() => runTests(false)} title="Run every tests/test_*.py (⌘⇧↵)">
@@ -323,7 +353,7 @@ export default function WorkspacePage({ mode }: { mode: "solve" | "review" }) {
         ) : (
           <>
             <button className="btn ghost small" onClick={vote} disabled={!solution || hasVoted(solution.id)} title="Upvote (10 points for the author)">▲ {votes ?? 0}</button>
-            <button className="btn ghost" disabled={!!busy || py === "failed" || !runnable} onClick={run} title={`Run ${entry} (⌘↵)`}>
+            <button className="btn ghost" disabled={!!busy || py === "failed" || !runnable} onClick={() => run()} title={`Run ${entry} (⌘↵)`}>
               {busy === "run" ? <i className="spin" /> : "▶"} Run <span className="ws-entry">{baseName(entry)}</span>
             </button>
             <button className="btn ghost" disabled={!!busy || py === "failed"} onClick={() => runTests(true)} title="Run the problem's own tests on this code (⌘⇧↵)">
@@ -336,6 +366,7 @@ export default function WorkspacePage({ mode }: { mode: "solve" | "review" }) {
             ) : null}
           </>
         )}
+        <button className="btn ghost small" aria-pressed={mapOpen} onClick={() => toggleMap(!mapOpen)} title="Show or hide the live map">◉ Map</button>
         <button className="icon-btn" onClick={toggleDay} title="Projector mode (D)" aria-label="Toggle projector mode">{dayMode ? "☾" : "☀"}</button>
       </header>
 
@@ -462,6 +493,18 @@ export default function WorkspacePage({ mode }: { mode: "solve" | "review" }) {
           )}
         </section>
       </main>
+
+      {mapOpen && project && (
+        <MapPreview
+          project={project}
+          layers={mapLayers}
+          theme={dayMode ? "day" : "night"}
+          state={mapState}
+          live={readOnly ? null : live}
+          onLive={toggleLive}
+          onClose={() => toggleMap(false)}
+        />
+      )}
 
       {submitOpen && problem && project && (
         <SubmitDialog

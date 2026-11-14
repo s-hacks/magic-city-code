@@ -58,3 +58,14 @@ plan_route(shelter, sightings)
 - `min(items, key=...)` finds the item with the smallest value of something you calculate.
 - Split the sightings into two lists first (hot and not hot), then do the same loop on each.
 - Keep a variable like `here` for where the van is. It starts as the shelter.
+
+## The map
+
+The map next to the editor shows every spot in the data files that has `lat` and `lon`. When you run `main.py`, the bottom of the file draws your answer on top with `mapview`:
+
+- `mapview.highlight(rows, label="name")` lights up your picks, numbered in order.
+- `mapview.points(rows, color="cyan")` adds plain dots.
+- `mapview.route(stops)` draws a line through the stops, in order.
+- `mapview.note("text")` puts a caption on the map.
+
+With **Live** on, the map redraws a moment after you stop typing.

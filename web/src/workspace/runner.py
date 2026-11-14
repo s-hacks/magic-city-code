@@ -4,7 +4,9 @@
 # mode "tests": writes the files, then runs every test_*.py and calls each test_* function.
 # The project folder is the working directory and is on sys.path, so open("data/x.csv")
 # and "from helpers import load" both work. Output streams through the worker's stdout hook.
-import builtins, json, linecache, os, re, runpy, shutil, sys, time, traceback, importlib
+# The built-in `mapview` module lets a program draw on the live map preview; whatever it drew
+# comes back with the run result as "map".
+import builtins, json, linecache, math, os, re, runpy, shutil, sys, time, traceback, importlib, types
 
 ROOT = "/home/pyodide/ws"
 
@@ -14,6 +16,90 @@ def _no_input(*_args, **_kwargs):
 
 
 builtins.input = _no_input
+
+# --- mapview: draw on the live map preview -------------------------------------------------------
+MAX_MAP_FEATURES = 5000
+_map = []  # layers drawn during this run
+
+
+def _latlon(item):
+    """(lat, lon) from a dict with lat/lon (or latitude/longitude/lng), a (lat, lon) pair, or an object."""
+    if isinstance(item, dict):
+        lat = next((item[k] for k in ("lat", "latitude", "Lat", "LAT") if k in item), None)
+        lon = next((item[k] for k in ("lon", "lng", "long", "longitude", "Lon", "LON") if k in item), None)
+    elif isinstance(item, (tuple, list)) and len(item) >= 2:
+        lat, lon = item[0], item[1]
+    else:
+        lat, lon = getattr(item, "lat", None), getattr(item, "lon", getattr(item, "lng", None))
+    try:
+        lat, lon = float(lat), float(lon)
+    except (TypeError, ValueError):
+        raise ValueError(f"mapview needs a latitude and longitude, like {{'lat': 33.52, 'lon': -86.81}} or (33.52, -86.81). Got: {item!r:.80}") from None
+    if not (math.isfinite(lat) and math.isfinite(lon) and -90 <= lat <= 90 and -180 <= lon <= 180):
+        raise ValueError(f"mapview got a spot that isn't on Earth: lat={lat}, lon={lon}. Are lat and lon swapped?")
+    return lat, lon
+
+
+def _plain(v):
+    return v if isinstance(v, (int, float, str, bool)) or v is None else str(v)
+
+
+def _props(item, label):
+    props = {k: _plain(v) for k, v in list(item.items())[:12]} if isinstance(item, dict) else {}
+    if label is not None:
+        if callable(label):
+            props["label"] = str(label(item))
+        elif isinstance(item, dict) and label in item:
+            props["label"] = str(item[label])
+        else:
+            props["label"] = str(label)
+    return props
+
+
+def _add(kind, items, color, label, name):
+    items = list(items)
+    if sum(len(l["items"]) for l in _map) + len(items) > MAX_MAP_FEATURES:
+        raise ValueError(f"mapview can draw at most {MAX_MAP_FEATURES} things in one run.")
+    out = []
+    for it in items:
+        lat, lon = _latlon(it)
+        out.append({"lat": lat, "lon": lon, "props": _props(it, label)})
+    _map.append({"kind": kind, "name": name or kind, "color": color, "items": out})
+
+
+mapview = types.ModuleType("mapview")
+mapview.__doc__ = """Draw on the map preview next to the editor.
+
+    mapview.points(rows, color="cyan", label="name")   # many small dots
+    mapview.highlight(rows, label="stop_id")           # your answer: big glowing numbered spots
+    mapview.route(stops)                               # a line through the stops, in order
+    mapview.note("Top 4 stops cover 263 kids")         # a caption on the map
+
+Each item can be a dict with "lat" and "lon", or a (lat, lon) pair."""
+
+
+def _points(rows, color="cyan", label=None, name=None):
+    _add("points", rows, color, label, name)
+
+
+def _highlight(rows, color="gold", label=None, name=None):
+    _add("highlight", rows, color, label, name)
+
+
+def _route(stops, color="gold", label=None, name=None):
+    _add("route", stops, color, label, name)
+
+
+def _note(text):
+    _map.append({"kind": "note", "name": "note", "color": None, "items": [], "text": str(text)[:300]})
+
+
+def _clear():
+    _map.clear()
+
+
+mapview.points, mapview.highlight, mapview.route, mapview.note, mapview.clear = _points, _highlight, _route, _note, _clear
+sys.modules["mapview"] = mapview
 
 
 def _rel(filename):
@@ -112,7 +198,11 @@ def _tests(project):
 def __ws_run(project_json, mode):
     project = json.loads(project_json)
     _write_project(project)
+    _map.clear()
     out = _tests(project) if mode == "tests" else _run(project)
+    if mode == "run":
+        out["map"] = list(_map)  # what was drawn before any error still shows
+    _map.clear()
     sys.stdout.flush()
     sys.stderr.flush()
     return json.dumps(out)

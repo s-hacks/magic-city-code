@@ -72,3 +72,14 @@ Returns a list of `inlet_id`s, the one to fix first at the front. Use these rule
 - A `set` remembers what you have already seen. You can put a pair like `(inlet_id, date)` in a set.
 - `sorted(items, key=...)` can sort by more than one thing. Put a minus sign in front of a number to sort big to small.
 - Do one function at a time. Get the counting tests green first.
+
+## The map
+
+The map next to the editor shows every spot in the data files that has `lat` and `lon`. When you run `main.py`, the bottom of the file draws your answer on top with `mapview`:
+
+- `mapview.highlight(rows, label="name")` lights up your picks, numbered in order.
+- `mapview.points(rows, color="cyan")` adds plain dots.
+- `mapview.route(stops)` draws a line through the stops, in order.
+- `mapview.note("text")` puts a caption on the map.
+
+With **Live** on, the map redraws a moment after you stop typing.

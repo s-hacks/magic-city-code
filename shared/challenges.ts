@@ -3,6 +3,8 @@
 // only for its leak guard (the solution is never sent to Claude or shown to students).
 
 import { bedsCoachInfo, billsCoachInfo, vanCoachInfo } from "./practiceChallenges";
+import { floodCoachInfo, groceryCoachInfo, leaksCoachInfo } from "./demoChallenges";
+import { trappedCoachInfo } from "./trappedChallenge";
 
 export interface ChallengeCoachInfo {
   id: string;
@@ -78,5 +80,5 @@ def shortest_path(graph, start, goal):
 };
 
 export const challengeCoachInfo: Record<string, ChallengeCoachInfo> = Object.fromEntries(
-  [routeCoachInfo, vanCoachInfo, billsCoachInfo, bedsCoachInfo].map((c) => [c.id, c]),
+  [routeCoachInfo, vanCoachInfo, billsCoachInfo, bedsCoachInfo, leaksCoachInfo, groceryCoachInfo, floodCoachInfo, trappedCoachInfo].map((c) => [c.id, c]),
 );

@@ -1,0 +1,7 @@
+/* Don't Get Trapped: rail crossings on the map. A stopped train is a striped orange bar; a clear
+   crossing is a small railroad-crossing X. */
+.trap-train { padding: 2px 7px; border-radius: 6px; border: 2px solid #fff; color: #fff; font-size: 10px; font-weight: 900; letter-spacing: .08em; pointer-events: auto; cursor: default;
+  background: repeating-linear-gradient(135deg, var(--orange) 0 6px, var(--red) 6px 12px); box-shadow: 0 0 16px -2px var(--orange); animation: trap-pulse 1.4s ease-in-out infinite alternate; }
+.trap-xing { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--glass); border: 1.5px solid var(--muted); color: var(--muted); font-size: 10px; font-weight: 900; pointer-events: auto; cursor: default; }
+@keyframes trap-pulse { to { box-shadow: 0 0 26px 2px var(--orange); } }
+.sw.train { width: 18px; height: 8px; border-radius: 3px; background: repeating-linear-gradient(135deg, var(--orange) 0 4px, var(--red) 4px 8px); }

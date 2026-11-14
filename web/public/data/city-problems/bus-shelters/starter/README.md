@@ -61,3 +61,14 @@ pick_shelters([
 - `sorted(items, key=...)` can sort by a number you work out for each item.
 - To sort big to small, put a minus sign in front of the number, or use `reverse=True`. For ties, make the key a pair: `(-score, stop_id)`.
 - A slice like `my_list[:4]` takes the first 4 items.
+
+## The map
+
+The map next to the editor shows every spot in the data files that has `lat` and `lon`. When you run `main.py`, the bottom of the file draws your answer on top with `mapview`:
+
+- `mapview.highlight(rows, label="name")` lights up your picks, numbered in order.
+- `mapview.points(rows, color="cyan")` adds plain dots.
+- `mapview.route(stops)` draws a line through the stops, in order.
+- `mapview.note("text")` puts a caption on the map.
+
+With **Live** on, the map redraws a moment after you stop typing.

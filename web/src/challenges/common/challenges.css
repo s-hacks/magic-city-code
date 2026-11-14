@@ -13,3 +13,26 @@
 .sw.violet { background: var(--violet); box-shadow: 0 0 8px var(--violet); }
 .sw.red { background: var(--red); box-shadow: 0 0 8px var(--red); }
 .sw.grey { background: var(--muted); }
+
+/* Stop the Leaks: crew trucks and the water-lost counter */
+.truck { padding: 3px 9px; border-radius: 999px; border: 2px solid #fff; background: var(--crew); color: #0b0f1a; font-size: 11px; font-weight: 800; white-space: nowrap; pointer-events: none; box-shadow: 0 0 16px -2px var(--crew); }
+.truck.busy { animation: flash .45s infinite alternate; }
+.leak-counter { position: absolute; left: 12px; bottom: 64px; z-index: 2; min-width: 230px; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--line); pointer-events: none; }
+.leak-counter .lc-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--cyan); }
+.leak-counter .lc-num { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.leak-counter .lc-sub { font-size: 12px; color: var(--muted); }
+.leak-counter .lc-bar { height: 6px; margin: 6px 0; border-radius: 999px; background: var(--raised); overflow: hidden; }
+.leak-counter .lc-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--cyan), var(--blue)); }
+.leak-counter.ok { border-color: var(--green); }
+.leak-counter.ok .lc-fill { background: linear-gradient(90deg, var(--green), var(--cyan)); }
+.leak-counter.bad { border-color: var(--orange); }
+.leak-counter.bad .lc-fill { background: linear-gradient(90deg, var(--orange), var(--red)); }
+
+/* Grocery Gap: chosen-site pins; Flood Cut-Off: shelter pins */
+.site-pin { display: flex; flex-direction: column; align-items: center; gap: 3px; pointer-events: none; }
+.site-pin .name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; padding: 3px 9px; border-radius: 999px; background: var(--accent); color: var(--accentInk); font-size: 12px; font-weight: 800; white-space: nowrap; box-shadow: 0 0 20px -2px var(--accent); }
+.site-pin .dot { width: 14px; height: 14px; border-radius: 50%; border: 3px solid #fff; background: var(--accent); box-shadow: 0 0 16px var(--accent); }
+.site-pin.ghosted .name, .site-pin.ghosted .dot { background: transparent; color: var(--text); border: 2px dashed var(--text); box-shadow: none; }
+.sw.cyan { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+.sw.green { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.sw.ramp { width: 28px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--green), var(--accent), var(--orange), var(--red)); }
