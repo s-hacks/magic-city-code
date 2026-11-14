@@ -33,7 +33,7 @@ export const CodePanel = (p: CodePanelProps) => {
     <>
       <div className="code-head">
         <span className="eyebrow">Your code · Python</span>
-        <span className="tiny">Click a site on the map to add it · Ctrl+Enter runs</span>
+        <span className="tiny">Click a site on the map to add it · ⌘/Ctrl+Enter runs</span>
       </div>
       <div className="code-body">
         <Editor value={p.code} onChange={p.onChange} highlightLine={p.highlightLine} errorLine={p.errorLine} onRun={p.onRun} />

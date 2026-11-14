@@ -2,10 +2,14 @@
 // any error) we send the level's stored hint. The level's solution is never sent to Claude, and a
 // guard stops the stream if the reply starts repeating solution lines anyway.
 import Anthropic from "@anthropic-ai/sdk";
-import type { CoachRequest, Level, Mission } from "@mcc/shared";
+import type { CoachRequest } from "@mcc/shared";
 import { describeError, FALLBACK_BETA, getClaude } from "./claude";
 import { COACH_MODEL } from "./config";
-import { COACH_RULES, coachUserMessage, levelContext } from "./prompts/coach";
+import { COACH_RULES, coachUserMessage, levelContext, type CoachLevel, type CoachMission } from "./prompts/coach";
+import { scrub } from "./scrub";
+
+/** If no text arrives from Claude within this time, the stored hint is sent instead. */
+export const FIRST_TOKEN_DEADLINE_MS = 8000;
 import { leaksSolution, solutionLines } from "./validate";
 
 const GENERIC_HINTS = [
@@ -19,10 +23,10 @@ export function hintStep(hintsGiven: number): number {
 }
 
 /** The stored hint for this step, or a generic one if the stored hint would give the answer away. */
-export function fallbackHint(level: Level, hintsGiven: number): string {
+export function fallbackHint(level: CoachLevel, hintsGiven: number): string {
   const step = hintStep(hintsGiven);
   const stored = level.hints[step];
-  if (stored && stored.trim() && !leaksSolution(stored, level.solution, level.starterCode)) return stored;
+  if (stored && stored.trim() && !leaksSolution(stored, level.solution ?? "", level.starterCode)) return stored;
   return GENERIC_HINTS[step];
 }
 
@@ -76,12 +80,14 @@ export function createLeakGuard(solution: string, starterCode: string) {
 export interface CoachDeps {
   claude?: Anthropic | null;
   signal?: AbortSignal;
+  firstTokenMs?: number;
 }
 
 /** Streams a hint through `write`. Returns where it came from. */
 export async function runCoach(
-  req: CoachRequest,
-  mission: Mission,
+  req: Omit<CoachRequest, "missionId" | "mission">,
+  /** The server's stored copy when it has one; otherwise the browser's copy (no solutions). */
+  mission: CoachMission,
   write: (chunk: string) => void,
   deps: CoachDeps = {},
 ): Promise<{ source: "ai" | "fallback"; note?: string }> {
@@ -95,7 +101,18 @@ export async function runCoach(
     return { source: "fallback", note: "no Claude key" };
   }
 
-  const guard = createLeakGuard(level.solution, level.starterCode);
+  const guard = createLeakGuard(level.solution ?? "", level.starterCode);
+  // Our own abort: fires when the student leaves, or when no text arrives in time.
+  const abort = new AbortController();
+  const onClientAbort = () => abort.abort();
+  deps.signal?.addEventListener("abort", onClientAbort);
+  let gotText = false;
+  let firstTokenTimedOut = false;
+  const firstTokenTimer = setTimeout(() => {
+    if (gotText) return;
+    firstTokenTimedOut = true;
+    abort.abort();
+  }, deps.firstTokenMs ?? FIRST_TOKEN_DEADLINE_MS);
   try {
     const stream = claude.beta.messages.stream(
       {
@@ -113,20 +130,22 @@ export async function runCoach(
             role: "user",
             content: coachUserMessage({
               step,
-              code: req.code ?? "",
+              // Students sometimes type their name or address; scrub before it reaches the model.
+              code: scrub(req.code ?? ""),
               lastError: req.lastError,
               lastCoverage: req.lastCoverage,
-              question: req.question,
+              question: req.question ? scrub(req.question) : undefined,
               teacherHint: fallbackHint(level, step),
             }),
           },
         ],
       },
-      { signal: deps.signal },
+      { signal: abort.signal },
     );
 
     for await (const event of stream) {
       if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+        gotText = true;
         const safe = guard.push(event.delta.text);
         if (safe) write(safe);
         if (guard.blocked) {
@@ -152,8 +171,15 @@ export async function runCoach(
     return { source: "ai" };
   } catch (err) {
     if (deps.signal?.aborted) return { source: "ai", note: "client went away" };
+    if (firstTokenTimedOut && !guard.sentAnything) {
+      write(fallbackHint(level, step));
+      return { source: "fallback", note: "no reply within the first-token deadline" };
+    }
     // Anything already streamed stays; otherwise the student still gets a hint.
     if (!guard.sentAnything) write(fallbackHint(level, step));
     return { source: "fallback", note: describeError(err) };
+  } finally {
+    clearTimeout(firstTokenTimer);
+    deps.signal?.removeEventListener("abort", onClientAbort);
   }
 }

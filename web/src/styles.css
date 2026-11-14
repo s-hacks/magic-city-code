@@ -62,7 +62,9 @@ code { font-family: var(--mono); background: color-mix(in srgb, var(--text) 8%, 
 .examples { display: grid; gap: 6px; }
 .example { text-align: left; padding: 8px 12px; border-radius: 12px; border: 1px dashed var(--line); background: transparent; font-size: 14px; cursor: pointer; }
 .example:hover { border-style: solid; border-color: var(--accent); }
-.error-box { margin: 0; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--accent); color: var(--accent); }
+.error-box { margin: 0; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--accent); display: grid; gap: 10px; }
+.error-box p { color: var(--accent); }
+.seed-choices { display: flex; flex-wrap: wrap; gap: 8px; }
 .loading-box { text-align: center; padding: 60px 10px; display: grid; gap: 10px; justify-items: center; }
 .spinner { width: 48px; height: 48px; border-radius: 50%; border: 4px solid var(--raised); border-top-color: var(--accent); animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }

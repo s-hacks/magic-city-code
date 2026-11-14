@@ -21,6 +21,10 @@ import { buildTemplateMission, themeSpec, type ThemeSpec } from "./templates";
 import { validateMission } from "./validate";
 
 export const MAX_PROBLEM_CHARS = 2000;
+/** The whole Claude part of one generate request (both attempts) must finish within this. */
+export const GENERATE_DEADLINE_MS = 25_000;
+/** Don't start a new attempt with less time than this left. */
+const MIN_ATTEMPT_MS = 4_000;
 
 export interface GenerateOutcome {
   response: GenerateResponse;
@@ -36,6 +40,8 @@ export interface GenerateDeps {
   claude?: Anthropic | null;
   /** Python sandbox for calibration. Pass null to skip calibration. Defaults to the shared one. */
   sandbox?: PythonSandbox | null;
+  /** Overall deadline for the Claude attempts, in ms. */
+  deadlineMs?: number;
 }
 
 type Checked = { ok: true; mission: Mission } | { ok: false; errors: string[] };
@@ -66,7 +72,14 @@ export async function generateMission(req: GenerateRequest, deps: GenerateDeps):
 
   let attempts = 0;
   if (claude) {
-    const ai = await generateWithClaude(claude, { text, required, hoods, city, sandbox });
+    const ai = await generateWithClaude(claude, {
+      text,
+      required,
+      hoods,
+      city,
+      sandbox,
+      deadline: Date.now() + (deps.deadlineMs ?? GENERATE_DEADLINE_MS),
+    });
     attempts = ai.attempts;
     notes.push(...ai.notes);
     if (ai.kind === "mission") {
@@ -98,7 +111,14 @@ type AiResult =
 
 async function generateWithClaude(
   claude: Anthropic,
-  ctx: { text: string; required: Neighborhood | null; hoods: Neighborhood[]; city: CityData; sandbox: PythonSandbox | null },
+  ctx: {
+    text: string;
+    required: Neighborhood | null;
+    hoods: Neighborhood[];
+    city: CityData;
+    sandbox: PythonSandbox | null;
+    deadline: number; // Date.now() value after which we stop asking Claude
+  },
 ): Promise<AiResult> {
   const schema = buildDraftSchema(ctx.hoods.map((n) => n.id));
   // The helper turns the Zod schema into the JSON schema structured outputs expects.
@@ -107,7 +127,14 @@ async function generateWithClaude(
   let previousErrors: string[] = [];
 
   for (let attempt = 1; attempt <= 2; attempt++) {
+    const remaining = ctx.deadline - Date.now();
+    if (remaining < MIN_ATTEMPT_MS) {
+      notes.push(`attempt ${attempt}: skipped, generate deadline reached`);
+      return { kind: "failed", attempts: attempt - 1, notes };
+    }
     let response: Anthropic.Beta.BetaMessage;
+    const timer = new AbortController();
+    const timeout = setTimeout(() => timer.abort(), remaining);
     try {
       response = await claude.beta.messages.create({
         model: GENERATOR_MODEL,
@@ -126,11 +153,20 @@ async function generateWithClaude(
             content: generatorUserMessage({ residentText: ctx.text, requiredNeighborhood: ctx.required, previousErrors }),
           },
         ],
-      });
+      },
+      // No SDK retries here: the deadline covers everything, and the fallback is instant.
+      { signal: timer.signal, maxRetries: 0 },
+      );
     } catch (err) {
+      if (timer.signal.aborted) {
+        notes.push(`attempt ${attempt}: generate deadline reached; using the fallback`);
+        return { kind: "failed", attempts: attempt, notes };
+      }
       // Network, auth or rate-limit trouble: a second try won't help the demo. Fall back now.
       notes.push(`attempt ${attempt}: ${describeError(err)}`);
       return { kind: "failed", attempts: attempt, notes };
+    } finally {
+      clearTimeout(timeout);
     }
 
     notes.push(
@@ -326,7 +362,9 @@ function finish(
   o: { mission: Mission; text: string; source: "ai" | "fallback"; usedAI: boolean; attempts: number; notes: string[] },
 ): GenerateOutcome {
   store.saveMission(o.mission);
-  const problem = store.saveProblem(card(o.text, o.mission.area.neighborhood, "mission", o.mission.id));
+  // The card says "mission" only after an adult approves it (POST /api/missions/:id/approve).
+  const problem = store.saveProblem(card(o.text, o.mission.area.neighborhood, "new"));
+  store.linkMissionToProblem(o.mission.id, problem.id);
   return {
     response: { status: "ok", mission: o.mission, problem, source: o.source },
     usedAI: o.usedAI,

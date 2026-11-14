@@ -16,6 +16,7 @@ export interface ProposalDraft {
   levelIndex: number;
   code: string;
   hubs: number;
+  thing: string;
   before: number;
   after: number;
   helped: number;

@@ -1,6 +1,7 @@
 // Dev harness for the map: renders MapView, the meter and the legend with real data
 // and the real engine when available, otherwise a synthetic West End and a fake engine.
 // Keys: R run 5 hubs, B hold to compare, D day/night, H home/mission. Not part of the app.
+// Add ?mission=<id> to load web/public/data/missions/<id>.json instead of the built-in West End mission.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Action, CityData, Mission, Result, SiteInfo } from "@mcc/shared";
 import { MapView, type Flare, type MapViewHandle } from "./MapView";
@@ -104,10 +105,19 @@ export function MapHarness() {
     })();
   }, []);
 
+  const [fileMission, setFileMission] = useState<Mission | null>(null);
+  useEffect(() => {
+    const id = new URLSearchParams(location.search).get("mission");
+    if (id) fetch(`/data/missions/${id}.json`).then((r) => (r.ok ? r.json() : null)).then(setFileMission, () => {});
+  }, []);
   const mission = useMemo(() => {
+    if (fileMission) return fileMission;
     const n = data?.neighborhoods.find((x) => x.id === "west-end");
     return n ? harnessMission(n.bbox, n.id) : harnessMission();
-  }, [data]);
+  }, [data, fileMission]);
+  useEffect(() => {
+    setResult(null); // new mission: start again from its baseline
+  }, [mission]);
 
   const api = useMemo(
     () => ({
@@ -188,6 +198,7 @@ export function MapHarness() {
         onSiteClick={(s) => setStep(`clicked ${s.id}`)}
         onRunStep={(s) => setStep(s ? `hub #${s.order + 1} · line ${s.line ?? "?"}` : "")}
         onRunComplete={() => result?.ok && setShownMetrics(result)}
+        onRunCancel={() => setStep("run cancelled")}
       />
       <div
         style={{
@@ -219,6 +230,15 @@ export function MapHarness() {
           <button style={btn} onClick={() => setDayMode((x) => !x)}>{dayMode ? "Night" : "Day"} (D)</button>
           <button style={btn} onClick={() => setMode((x) => (x === "home" ? "mission" : "home"))}>{mode === "home" ? "Mission" : "Home"} (H)</button>
           <button style={btn} onClick={reportProblem}>Report problem</button>
+          <button
+            style={btn}
+            onClick={() => {
+              run(5);
+              setTimeout(() => setResult(baselineResult), 600);
+            }}
+          >
+            Run, then reset mid-run
+          </button>
         </div>
         <div style={{ minHeight: 22, color: "#FFC44D" }}>{step || (hoverFlare ? `flare: ${hoverFlare}` : "")}</div>
       </div>

@@ -37,7 +37,7 @@ describe("coach fallback", () => {
     const m = mission();
     let out = "";
     const r = await runCoach(
-      { mission: m, levelIndex: 0, code: "", hintsGiven: 1, question: "just give me the answer" },
+      { levelIndex: 0, code: "", hintsGiven: 1, question: "just give me the answer" },
       m,
       (c) => (out += c),
       { claude: null },
@@ -76,6 +76,87 @@ describe("leak guard", () => {
     out += g.push("_hub(place)\n");
     out += g.end();
     expect(g.blocked).toBe(true);
+    expect(containsSolution(out)).toBe(false);
+  });
+});
+
+// A stand-in for the Claude client: records the request and streams the given text.
+function fakeClaude(text: string, opts: { delayMs?: number } = {}) {
+  const calls: { params: any }[] = [];
+  const client = {
+    beta: {
+      messages: {
+        stream(params: any, reqOpts: { signal?: AbortSignal }) {
+          calls.push({ params });
+          let aborted = false;
+          reqOpts.signal?.addEventListener("abort", () => (aborted = true));
+          return {
+            abort() {
+              aborted = true;
+            },
+            async *[Symbol.asyncIterator]() {
+              if (opts.delayMs) {
+                await new Promise((r) => setTimeout(r, opts.delayMs));
+                if (aborted) throw new Error("aborted");
+              }
+              for (const piece of text.match(/.{1,7}/gs) ?? []) {
+                yield { type: "content_block_delta", delta: { type: "text_delta", text: piece } };
+              }
+            },
+            async finalMessage() {
+              return { stop_reason: "end_turn", content: [] };
+            },
+          };
+        },
+      },
+    },
+  };
+  return { client: client as any, calls };
+}
+
+describe("coach with Claude (fake client)", () => {
+  it("scrubs the question and code, and doesn't praise the score after an error", async () => {
+    const m = mission();
+    const { client, calls } = fakeClaude("Look at line 2. What does the error say?");
+    let out = "";
+    await runCoach(
+      {
+        levelIndex: 0,
+        code: "# my name is Maya, call 205-555-1234\nplaces = city.sites()",
+        question: "My name is Maya Jones, help!",
+        lastError: "Line 2: too many hubs",
+        lastCoverage: 0.24,
+        hintsGiven: 0,
+      },
+      m,
+      (c) => (out += c),
+      { claude: client },
+    );
+    const sent = JSON.stringify(calls[0].params);
+    expect(sent).not.toMatch(/Maya|555-1234/);
+    expect(sent).toContain("Do not praise the score");
+    expect(sent).not.toContain("Last coverage score");
+    expect(sent).not.toContain("city.place_hub(place)"); // the solution-only line is never sent
+    expect(out).toBe("Look at line 2. What does the error say?");
+  });
+
+  it("sends the stored hint when no text arrives before the first-token deadline", async () => {
+    const m = mission();
+    const { client } = fakeClaude("too late", { delayMs: 300 });
+    let out = "";
+    const r = await runCoach({ levelIndex: 0, code: "", hintsGiven: 1 }, m, (c) => (out += c), {
+      claude: client,
+      firstTokenMs: 50,
+    });
+    expect(r.source).toBe("fallback");
+    expect(out).toBe(m.levels[0].hints[1]);
+  });
+
+  it("stops a reply that writes out the stored solution", async () => {
+    const m = mission();
+    const { client } = fakeClaude("Here you go:\nfor place in places[:3]:\n    city.place_hub(place)\n");
+    let out = "";
+    await runCoach({ levelIndex: 0, code: "", hintsGiven: 0, question: "answer pls" }, m, (c) => (out += c), { claude: client });
     expect(containsSolution(out)).toBe(false);
   });
 });

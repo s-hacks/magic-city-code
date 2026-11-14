@@ -20,7 +20,7 @@ import { MissionPanel } from "./MissionPanel";
 import { CodePanel } from "./CodePanel";
 import { Coach } from "./Coach";
 import { getUnlocked, saveSnapshot, setUnlocked } from "./storage";
-import { pct } from "./text";
+import { needWords, pct, plural } from "./text";
 
 /** Draw every canvas in the map (map + lights) onto one small picture. */
 function snapshotOf(handle: MapViewHandle | null, background: string): string | null {
@@ -55,7 +55,10 @@ export function MissionScreen({ mission }: { mission: Mission }) {
   const [code, setCodeState] = useState(mission.levels[0].starterCode);
   const [result, setResult] = useState<Result | null>(null);
   const [runToken, setRunToken] = useState(0);
-  const [shown, setShown] = useState<Result | null>(null);
+  // The last finished successful run for this level, with the exact code and counts it used.
+  const [shownRun, setShownRun] = useState<{ result: Result; code: string; hubs: number; thing: string; levelIndex: number } | null>(null);
+  const shown = shownRun?.result ?? null;
+  const setShown = (r: null) => setShownRun(r);
   const [running, setRunning] = useState(false);
   const [stdout, setStdout] = useState("");
   const [problems, setProblems] = useState<string[]>([]);
@@ -64,10 +67,14 @@ export function MissionScreen({ mission }: { mission: Mission }) {
   const [highlight, setHighlight] = useState<number | null>(null);
   const [banner, setBanner] = useState<{ text: string; next: boolean } | null>(null);
   const [lastError, setLastError] = useState<string | undefined>();
-  const pending = useRef<Result | null>(null);
+  const pending = useRef<{ result: Result; code: string; levelIndex: number } | null>(null);
+  const levelRef = useRef(0);
+  const codeRef = useRef(code);
+  const busyRef = useRef(false);
+  const runTimer = useRef<number>(0);
   const handle = useRef<MapViewHandle>(null);
-  const leftRef = useRef<HTMLDivElement>(null);
-  const rightRef = useRef<HTMLDivElement>(null);
+  const leftRef = useRef<HTMLElement>(null);
+  const rightRef = useRef<HTMLElement>(null);
   const [pad, setPad] = useState({ top: 80, bottom: 90, left: 440, right: 560 });
   const { comparing, buttonProps } = useCompare();
   const [hidden, setHidden] = useState<ReadonlySet<LayerGroup>>(new Set());
@@ -81,6 +88,10 @@ export function MissionScreen({ mission }: { mission: Mission }) {
 
   const hood = data?.neighborhoods.find((n) => n.id === mission.area.neighborhood)?.name ?? "this neighborhood";
   const level = mission.levels[levelIndex];
+  const words = needWords(mission);
+  levelRef.current = levelIndex;
+  codeRef.current = code;
+  busyRef.current = running;
 
   const sites: SiteInfo[] | undefined = useMemo(() => (data ? describeSites(mission, data) : undefined), [mission, data]);
   const base = useMemo(() => (data ? baseline(mission, data, levelIndex) : null), [mission, data, levelIndex]);
@@ -126,7 +137,7 @@ export function MissionScreen({ mission }: { mission: Mission }) {
   }
 
   function goLevel(i: number) {
-    if (i === levelIndex || i > unlocked || !mission.levels[i]) return;
+    if (busyRef.current || i === levelIndex || i > unlocked || !mission.levels[i]) return;
     codes.current[levelIndex] = code;
     setLevelIndex(i);
     setCodeState(codes.current[i] ?? mission.levels[i].starterCode);
@@ -135,6 +146,7 @@ export function MissionScreen({ mission }: { mission: Mission }) {
 
   // Demo keys: Ctrl+Shift+1/2/3 types that level's solution (switching level if unlocked).
   useDemoKeys(mission.levels, (solution) => {
+    if (busyRef.current) return;
     const idx = mission.levels.findIndex((l) => l.solution === solution);
     if (idx >= 0 && idx !== levelIndex && idx <= unlocked) {
       codes.current[levelIndex] = code;
@@ -146,6 +158,7 @@ export function MissionScreen({ mission }: { mission: Mission }) {
     setCodeState(solution);
   });
 
+  // R runs (demo key, ui-plan section 11). Ignored while typing.
   const runRef = useRef<() => void>(() => {});
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -157,48 +170,62 @@ export function MissionScreen({ mission }: { mission: Mission }) {
 
   async function run() {
     if (running || !data || !sites) return;
+    const started = { levelIndex, code };
+    let animating = false;
     setRunning(true);
     setStdout("");
     setProblems([]);
     setStatus("");
     setErrorLine(null);
     setBanner(null);
-    const outcome = await runner.run(
-      code,
-      { sites, stores: data.stores, neighborhoods: neighborhoodsSummary(mission, data) },
-      { onStdout: (t) => setStdout((s) => s + t) },
-    );
-    if (!outcome.ok) {
-      setErrorLine(outcome.line ?? null);
-      setProblems([outcome.friendly]);
-      setLastError(outcome.friendly);
-      setRunning(false);
-      return;
+    try {
+      const outcome = await runner.run(
+        code,
+        { sites, stores: data.stores, neighborhoods: neighborhoodsSummary(mission, data) },
+        { onStdout: (t) => setStdout((s) => s + t) },
+      );
+      // The student moved on (another level or edited code) while Python was running: drop it.
+      if (levelRef.current !== started.levelIndex || codeRef.current !== started.code) return;
+      if (!outcome.ok) {
+        setErrorLine(outcome.line ?? null);
+        setProblems([outcome.friendly]);
+        setLastError(outcome.friendly);
+        return;
+      }
+      const res = simulate(mission, outcome.actions, data, started.levelIndex);
+      if (!res.ok) {
+        const errs = res.errors.length ? res.errors : [{ message: "Something about the hubs did not work.", line: undefined }];
+        setProblems(errs.map((e) => e.message));
+        setErrorLine(res.errors.find((e) => e.line)?.line ?? null);
+        setLastError(errs[0].message);
+        return;
+      }
+      setLastError(undefined);
+      pending.current = { result: res, code: started.code, levelIndex: started.levelIndex };
+      animating = true;
+      setResult(res);
+      setRunToken((t) => t + 1); // same render as setResult
+      // Safety net: never leave the screen locked if the map does not report back.
+      window.clearTimeout(runTimer.current);
+      runTimer.current = window.setTimeout(() => setRunning(false), 12000);
+    } catch {
+      setProblems(["Something went wrong while checking your plan. Please press Run again."]);
+    } finally {
+      if (!animating) setRunning(false);
     }
-    const res = simulate(mission, outcome.actions, data, levelIndex);
-    if (!res.ok) {
-      const errs = res.errors.length ? res.errors : [{ message: "Something about the hubs did not work." }];
-      setProblems(errs.map((e) => e.message));
-      setErrorLine(res.errors.find((e) => e.line)?.line ?? null);
-      setLastError(errs[0].message);
-      setRunning(false);
-      return;
-    }
-    setLastError(undefined);
-    pending.current = res;
-    setResult(res);
-    setRunToken((t) => t + 1); // same render as setResult
   }
 
   const onRunComplete = useCallback(() => {
-    const res = pending.current;
+    const run = pending.current;
     pending.current = null;
+    window.clearTimeout(runTimer.current);
     setRunning(false);
     setHighlight(null);
-    if (!res || !res.ok) return;
-    setShown(res);
+    if (!run || !run.result.ok) return;
+    const res = run.result;
     const n = res.placed.length;
-    setStatus(n === 0 ? "Your code ran, but it did not place any hubs yet." : `Placed ${n} ${n === 1 ? mission.thing : mission.thing + "s"}.`);
+    setShownRun({ result: res, code: run.code, hubs: n, thing: mission.thing, levelIndex: run.levelIndex });
+    setStatus(n === 0 ? "Your code ran, but it did not place anything yet." : `Placed ${n} ${plural(mission.thing, n)}.`);
     if (res.goalMet) {
       const hasNext = levelIndex < maxIndex;
       if (hasNext && unlocked < levelIndex + 1) {
@@ -208,6 +235,17 @@ export function MissionScreen({ mission }: { mission: Mission }) {
       setBanner({ text: `You lit up ${pct(res.metrics.coverage)} of ${hood}!`, next: hasNext });
     }
   }, [levelIndex, maxIndex, unlocked, mission.id, mission.thing, hood]);
+
+  // The map dropped the animation (result or mission changed): unlock the screen.
+  const onRunCancel = useCallback(() => {
+    pending.current = null;
+    window.clearTimeout(runTimer.current);
+    setRunning(false);
+    setHighlight(null);
+  }, []);
+
+  // The success line lives in the Output box (not over the map), so it stays until the
+  // next Run or level change instead of timing out.
 
   // Click a site on the map -> put its place_hub line in the code.
   const onSiteClick = useCallback(
@@ -223,19 +261,20 @@ export function MissionScreen({ mission }: { mission: Mission }) {
   runRef.current = run;
 
   function makeProposal() {
-    const r = shown;
-    if (!r) return;
+    const run = shownRun;
+    if (!run) return;
     const snap = snapshotOf(handle.current, themes[dayMode ? "day" : "night"].land);
     if (snap) saveSnapshot(mission.id, snap);
     setDraft({
       mission,
       neighborhoodName: hood,
-      levelIndex,
-      code,
-      hubs: r.placed.length,
-      before: r.metrics.baselineCoverage,
-      after: r.metrics.coverage,
-      helped: r.metrics.helped,
+      levelIndex: run.levelIndex,
+      code: run.code, // exactly what was run, not what is in the editor now
+      hubs: run.hubs,
+      thing: run.thing,
+      before: run.result.metrics.baselineCoverage,
+      after: run.result.metrics.coverage,
+      helped: run.result.metrics.helped,
     });
     nav("/proposal/draft");
   }
@@ -263,6 +302,7 @@ export function MissionScreen({ mission }: { mission: Mission }) {
           onSiteClick={onSiteClick}
           onRunStep={(s) => setHighlight(s?.line ?? null)}
           onRunComplete={onRunComplete}
+          onRunCancel={onRunCancel}
         />
       )}
       <div className="vignette" aria-hidden />
@@ -273,7 +313,14 @@ export function MissionScreen({ mission }: { mission: Mission }) {
         {mission.levels.map((l, i) => {
           const locked = i > unlocked;
           return (
-            <button key={i} className="pill" aria-current={i === levelIndex} disabled={locked} onClick={() => goLevel(i)} title={locked ? "Finish the last level to unlock" : `${l.title} · ${l.concept}`}>
+            <button
+              key={i}
+              className="pill"
+              aria-current={i === levelIndex}
+              disabled={locked || running}
+              onClick={() => goLevel(i)}
+              title={locked ? "Finish the last level to unlock" : `${l.title} · ${l.concept}`}
+            >
               {locked ? <Lock /> : null} Level {i + 1}
             </button>
           );
@@ -321,7 +368,14 @@ export function MissionScreen({ mission }: { mission: Mission }) {
         />
       </section>
 
-      <Legend walkMinutes={mission.walkMinutes} showStores={mission.existingSources !== "none"} hidden={hidden} onToggle={toggleLayer} />
+      <Legend
+        walkMinutes={mission.walkMinutes}
+        showStores={mission.existingSources !== "none"}
+        farLabel={`far from ${words.place}`}
+        nearLabel={`within a ${mission.walkMinutes}-min walk of a ${mission.thing}`}
+        hidden={hidden}
+        onToggle={toggleLayer}
+      />
     </div>
   );
 }

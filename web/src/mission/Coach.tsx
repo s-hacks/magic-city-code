@@ -5,7 +5,7 @@
 // away, Sparks shares the next written hint instead. Sparks never writes the answer.
 import { useEffect, useRef, useState } from "react";
 import type { Mission } from "@mcc/shared";
-import { streamCoach } from "./api";
+import { streamCoach, toPublicMission } from "./api";
 import { Spark } from "../app/icons";
 
 interface Bubble {
@@ -24,7 +24,7 @@ export interface CoachProps {
 export function Coach({ mission, levelIndex, code, lastError, lastCoverage }: CoachProps) {
   const level = mission.levels[levelIndex];
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
-  const [given, setGiven] = useState(0); // how many hints/coach replies so far (0..3)
+  const [given, setGiven] = useState(0); // hints revealed with the Hint button (0..3)
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState(false);
   const abort = useRef<AbortController | null>(null);
@@ -55,14 +55,26 @@ export function Coach({ mission, levelIndex, code, lastError, lastCoverage }: Co
       });
     try {
       await streamCoach(
-        { mission, levelIndex, code, lastError, lastCoverage, question: q || undefined, hintsGiven: Math.min(given, 2) },
+        {
+          missionId: mission.id,
+          // Only a mission the server may not have (not a seed) is sent, with solutions removed.
+          mission: mission.source.kind === "seed" ? undefined : toPublicMission(mission),
+          levelIndex,
+          code,
+          lastError,
+          lastCoverage: lastError ? undefined : lastCoverage,
+          question: q || undefined,
+          hintsGiven: Math.min(given, 2),
+        },
         setLast,
-        ctl.signal,
+        AbortSignal.any([ctl.signal, AbortSignal.timeout(15000)]),
       );
     } catch {
-      if (!ctl.signal.aborted) setLast(nextHint()); // server away: use the written hint
+      if (!ctl.signal.aborted) {
+        setLast(nextHint()); // server away or slow: use the written hint
+        setGiven((g) => Math.min(g + 1, level.hints.length));
+      }
     }
-    setGiven((g) => Math.min(g + 1, level.hints.length));
     setBusy(false);
   }
 

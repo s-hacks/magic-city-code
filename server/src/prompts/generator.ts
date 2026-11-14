@@ -33,6 +33,21 @@ Examples that do NOT fit (set supported=false): a wrong water bill, potholes, br
   - Level 1, concept "Calling a function": place ONE thing. maxPlacements 1. goalTarget about 0.1.
   - Level 2, concept "Loops": use a for loop to place five. maxPlacements 5. goalTarget about 0.3.
   - Level 4, concept "Sorting and choosing": sort the sites so the ones near the most people come first, then place five. maxPlacements 5. goalTarget about 0.5.
+  - In level 4, top-ranked sites are often right next to each other, and two things side by side reach the same people. So the level-4 solution must spread its picks: go down the sorted list and skip a place if both its lat and its lon are less than 0.01 away from a place already chosen, stopping at the limit. Say this in the instructions too. Example solution:
+places = city.sites()
+best = sorted(places, key=lambda p: p.families_nearby, reverse=True)
+chosen = []
+for place in best:
+    if len(chosen) == 5:
+        break
+    too_close = False
+    for other in chosen:
+        if abs(place.lat - other.lat) < 0.01 and abs(place.lon - other.lon) < 0.01:
+            too_close = True
+    if not too_close:
+        chosen.append(place)
+        city.place_hub(place)
+    The starter code for level 4 should set up places and chosen = [] with step-by-step comments, and leave the sorting and the skipping to the student.
   - If the thing is limited (a produce truck or weekly farm stand makes only four stops), use four instead of five in levels 2 and 4.
 
 ## The Python the student writes

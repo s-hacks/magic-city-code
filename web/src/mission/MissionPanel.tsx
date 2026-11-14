@@ -6,7 +6,7 @@
 import type { CityData, FormerStore, Mission, Result } from "@mcc/shared";
 import { CityMeter } from "../map/CityMeter";
 import { ComparePlans } from "./ComparePlans";
-import { needsHonestyNote, NEED_LABEL, pct } from "./text";
+import { needsHonestyNote, needWords, pct } from "./text";
 
 export interface MissionPanelProps {
   mission: Mission;
@@ -23,6 +23,7 @@ export interface MissionPanelProps {
 export const MissionPanel = ({ mission, hood, levelIndex, baseline, shown, comparing, data, formerStores, onProposal }: MissionPanelProps) => {
   const level = mission.levels[levelIndex];
   const view = shown ?? baseline;
+  const words = needWords(mission);
   return (
     <>
       <p className="eyebrow">Mission · {level.concept}</p>
@@ -45,12 +46,12 @@ export const MissionPanel = ({ mission, hood, levelIndex, baseline, shown, compa
         target={level.goal.target}
         goalMet={!!shown?.goalMet}
         comparing={comparing}
-        unit={NEED_LABEL[mission.needColumn]}
+        unit={words.who}
       />
-      <p className="tiny">Counting {NEED_LABEL[mission.needColumn]} within a {mission.walkMinutes}-minute walk (straight-line estimate).</p>
+      <p className="tiny">Counting {words.who} within a {mission.walkMinutes}-minute walk of {words.place} (straight-line estimate).</p>
 
       {needsHonestyNote(mission) && (
-        <p className="note-box">Honest note: there is no public data on where people sleeping outside are. This mission counts low-income households instead, so it is a starting point, not the whole picture.</p>
+        <p className="note-box">Honest note: there is no public data on where people sleeping outside are, so this counts low-income households instead. A starting point, not the whole picture.</p>
       )}
       <details className="story">
         <summary>Read the story</summary>

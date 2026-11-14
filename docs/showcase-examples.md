@@ -23,7 +23,7 @@ Example 1 is built by hand. Examples 2–5 are produced by the AI mission genera
 - **The real problem:** the West End Save-A-Lot has been closed since September 2023. The city has put incentives into that one site since 2007 and approved $600K for a new store there in January 2025.
 - **A resident's words:** "There's no grocery store near West End, and I don't have a car."
 - **What the student codes:** a loop that places five pickup hubs at churches, schools and libraries, then a sort that picks the sites near the most families without cars.
-- **What judges see:** West End turns from red to gold. "Households with no car within a 10-minute walk of food: `183 households (10.1%)` → `977 households (53.9%)`."
+- **What judges see:** West End turns from red to gold. "Households with no car within a 10-minute walk of food: `195 households (10.7%)` → `959 households (52.9%)`."
 - **Who could act on it:** Shipt could pilot pooled grocery drop-offs at the top two hubs. Jones Valley Teaching Farm could use the same sites for produce pickup.
 
 ### 2. Homework Hotspots (Ensley)
@@ -31,7 +31,7 @@ Example 1 is built by hand. Examples 2–5 are produced by the AI mission genera
 - **The real problem:** Ed Farm's mission is closing the digital skills gap. A student with no internet at home cannot practice.
 - **A resident's words:** "My kids can't do their homework online at home."
 - **What the student codes:** the same pattern as mission 1, counting households with children and no internet subscription.
-- **What judges see:** "Households with no home internet within a 10-minute walk of free Wi-Fi: `0 households (0%)` → `393 households (45.3%)`."
+- **What judges see:** "Households with no home internet within a 10-minute walk of free Wi-Fi: `0 households (0%)` → `407 households (46.9%)`."
 - **Who could act on it:** Ed Farm could use the ranked list to choose where to run after-school sessions or place hotspots.
 
 ### 3. Warm Nights (Southside / downtown)
@@ -39,7 +39,7 @@ Example 1 is built by hand. Examples 2–5 are produced by the AI mission genera
 - **The real problem:** about 400 people sleep outside on a given night, and the city's 15 micro-shelters are full.
 - **A resident's words:** "On cold nights, where can people near me go to get warm?"
 - **What the student codes:** placing warming stations at libraries, rec centers and churches to reach the most seniors and households in poverty.
-- **What judges see:** "Low-income households within a 10-minute walk of a warming station: `0 households (0%)` → `1,454 households (31.6%)`."
+- **What judges see:** "Low-income households within a 10-minute walk of a warming station: `0 households (0%)` → `1,477 households (32.1%)`."
 - **Who could act on it:** Firehouse Ministries and the city could compare the list with the sites they open on cold nights.
 - **Honest limit:** there is no public data on where unsheltered people are. The mission counts seniors and low-income households instead, and says so on screen.
 
@@ -48,7 +48,7 @@ Example 1 is built by hand. Examples 2–5 are produced by the AI mission genera
 - **The real problem:** MAX ended Saturday bus service in January 2026.
 - **A resident's words:** "With no Saturday bus, I can't get to the store on my day off."
 - **What the student codes:** choosing five shuttle stops that reach the most households without cars.
-- **What judges see:** "Car-free households within a 10-minute walk of a Saturday stop: `201 households (27.3%)` → `477 households (64.9%)`."
+- **What judges see:** "Car-free households within a 10-minute walk of a Saturday stop: `199 households (27.1%)` → `480 households (65.3%)`."
 - **Who could act on it:** the transit agency's on-demand service, or a church van program, could use the stops as pickup points.
 
 ### 5. Farm Stand Route (Woodlawn)
@@ -56,7 +56,7 @@ Example 1 is built by hand. Examples 2–5 are produced by the AI mission genera
 - **The real problem:** UAB's mobile market has served over 17,000 people since 2021, and East Lake's Village Market grocery has been at risk. A truck can only make a few stops.
 - **A resident's words:** "The produce truck never comes to our side of the neighborhood."
 - **What the student codes:** picking the four weekly stops that reach the most households far from a store.
-- **What judges see:** "Households within a 10-minute walk of fresh produce once a week: `135 households (19.6%)` → `395 households (57.2%)`."
+- **What judges see:** "Households within a 10-minute walk of fresh produce once a week: `130 households (18.9%)` → `393 households (56.9%)`."
 - **Who could act on it:** Jones Valley Teaching Farm could test the top stop with a farm stand.
 
 ## The single strongest comparison
@@ -65,8 +65,8 @@ For mission 1, have the app compute two plans side by side:
 
 | Plan | Families with no car within a 10-minute walk of food |
 |---|---|
-| One new store at the old Save-A-Lot site | `201 households (11.1%)` |
-| Five pickup hubs chosen by a student's code | `977 households (53.9%)` |
+| One new store at the old Save-A-Lot site | `211 households (11.6%)` |
+| Five pickup hubs chosen by a student's code | `959 households (52.9%)` |
 
 If the five hubs reach more families, this is the headline of the demo: a middle-schooler's ten lines of code, on real data, produced a plan worth comparing with a $600K decision. If the numbers do not support it, drop the comparison and do not show it.
 

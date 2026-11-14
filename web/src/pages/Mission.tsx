@@ -6,12 +6,13 @@ import type { Mission } from "@mcc/shared";
 import { TopBar } from "../app/TopBar";
 import { useApp } from "../mission/AppContext";
 import { MissionScreen } from "../mission/MissionScreen";
+import { isPendingApproval } from "../mission/api";
 
 export function MissionPage() {
   const { id = "" } = useParams();
   const { getMission } = useApp();
   const [mission, setMission] = useState<Mission | null>(null);
-  const [state, setState] = useState<"loading" | "missing" | "ok">("loading");
+  const [state, setState] = useState<"loading" | "missing" | "pending" | "ok">("loading");
 
   useEffect(() => {
     let live = true;
@@ -19,7 +20,7 @@ export function MissionPage() {
     getMission(id).then((m) => {
       if (!live) return;
       setMission(m);
-      setState(m ? "ok" : "missing");
+      setState(m ? (m.approved === false ? "pending" : "ok") : isPendingApproval(id) ? "pending" : "missing");
     });
     return () => {
       live = false;
@@ -31,7 +32,13 @@ export function MissionPage() {
     <div className="app plain">
       <TopBar />
       <div className="center-card glass">
-        {state === "loading" ? <h2>Loading mission…</h2> : (
+        {state === "loading" ? <h2>Loading mission…</h2> : state === "pending" ? (
+          <>
+            <h2>This mission is waiting for an adult to approve it</h2>
+            <p className="muted">Ask a grown-up to approve it, then come back.</p>
+            <Link className="big-btn" to="/">Back to the city</Link>
+          </>
+        ) : (
           <>
             <h2>We couldn't find that mission</h2>
             <Link className="btn primary" to="/">Back to the city</Link>

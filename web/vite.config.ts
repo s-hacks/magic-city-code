@@ -6,7 +6,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    proxy: { "/api": "http://localhost:8787" },
+    // 127.0.0.1, not localhost: the server listens on IPv4 loopback only.
+    proxy: { "/api": "http://127.0.0.1:8787" },
   },
   worker: { format: "es" },
   test: { environment: "node" },

@@ -31,7 +31,10 @@ export function Home() {
     return flaresFor(problems, data.neighborhoods, labels);
   }, [data, problems, titles]);
 
-  const openProblem = (p?: ProblemCard) => p?.missionId && nav(`/mission/${p.missionId}`);
+  // Only missions an adult approved can be opened. (The seed index lists approved ones only.)
+  const approved = useMemo(() => new Set(missions.map((m) => m.id)), [missions]);
+  const canOpen = (p: ProblemCard) => !!p.missionId && approved.has(p.missionId);
+  const openProblem = (p?: ProblemCard) => p && canOpen(p) && nav(`/mission/${p.missionId}`);
   const hovered = problems.find((p) => p.id === hover);
   const [first, ...rest] = missions;
 
@@ -69,10 +72,10 @@ export function Home() {
       </section>
 
       {hovered && (
-        <div className={`flare-card glass is-shown${hovered.missionId ? " has-mission" : ""}`} role="status">
+        <div className={`flare-card glass is-shown${canOpen(hovered) ? " has-mission" : ""}`} role="status">
           <div className="flare-hood">{hoodName(hovered.neighborhood)}</div>
           <div className="flare-quote">“{hovered.text}”</div>
-          <div className="flare-cta">{hovered.missionId ? "Click the flare to open the mission →" : "Saved · mission in the works"}</div>
+          <div className="flare-cta">{canOpen(hovered) ? "Click the flare to open the mission →" : hovered.missionId ? "Waiting for an adult to approve" : "Saved · mission in the works"}</div>
         </div>
       )}
     </div>

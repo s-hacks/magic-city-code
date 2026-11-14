@@ -31,7 +31,7 @@
       "instructions": "A function is a button you can press with code. `city.place_hub(...)` puts one warming station on the map. Put the name of a place inside the parentheses, in quotes. Place one warming station at Birmingham Public Library. Then press Run and watch the map.",
       "goal": {
         "metric": "coverage",
-        "target": 0.06
+        "target": 0.07
       },
       "maxPlacements": 1,
       "starterCode": "# Level 1: place one warming station\n# These two lines look at the first place on the list.\nplaces = city.sites()\nprint(places[0])\n\n# Your turn: call city.place_hub with the name of the place, in quotes.\n",
@@ -49,7 +49,7 @@
       "instructions": "Writing `city.place_hub` 5 times is slow. A loop does the same job again and again for you. `city.sites()` gives you a list of places. Use a `for` loop to place a warming station at the first 5 places on the list. Then press Run.",
       "goal": {
         "metric": "coverage",
-        "target": 0.23
+        "target": 0.24
       },
       "maxPlacements": 5,
       "starterCode": "# Level 2: place 5 warming stations with a loop\nplaces = city.sites()\nprint(\"There are\", len(places), \"places to choose from.\")\n\n# Your turn: use a for loop to place a warming station at the first 5 places.\n",
@@ -67,7 +67,7 @@
       "instructions": "The first 5 places on the list are not always the best ones. Each place has `families_nearby`. Here that means households with low incomes within a 10-minute walk. Sort the places so the biggest number comes first. Then pick 5 warming stations from the top. One catch: the top places are often right next to each other, and two warming stations side by side help the same households. Skip a place if both its `lat` and its `lon` are less than 0.01 away from a place you already picked. Then press Run.",
       "goal": {
         "metric": "coverage",
-        "target": 0.31
+        "target": 0.32
       },
       "maxPlacements": 5,
       "starterCode": "# Level 4: sort, then choose\nplaces = city.sites()\nchosen = []   # the places you pick will go in here\n\n# Step 1: sort places so the most families_nearby come first.\n# Step 2: go down the sorted list. Pick a place unless it is\n#         too close to one in chosen. Stop at 5.\n# Remember to call city.place_hub for each place you pick.\n",

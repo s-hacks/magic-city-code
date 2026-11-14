@@ -201,7 +201,7 @@ describe("sites for Python", () => {
 });
 
 describe("resident dots", () => {
-  it("are about 3,000, split by need, inside their block", () => {
+  it("are about 3,000, split by households (10:20:30), inside their block", () => {
     const city = makeCity();
     const result = baseline(makeMission(), city);
     const count = (id: string) => result.residents.filter((r) => r.areaId === id).length;
@@ -224,13 +224,40 @@ describe("resident dots", () => {
     expect(before.residents.map((r) => r.position)).toEqual(first.residents.map((r) => r.position));
   });
 
-  it("every area with need gets at least one dot", () => {
+  it("are split by households, not by need", () => {
     const city = makeCity();
-    city.areas[0].households_no_car = 1; // tiny next to the others: 3000 * 1 / 500,301 rounds to 0
-    city.areas[1].households_no_car = 200_000;
-    city.areas[2].households_no_car = 300_000;
+    city.areas[0].households_no_car = 5000; // lots of need, but still only 10 households of 60
     const result = baseline(makeMission(), city);
+    expect(result.residents.filter((r) => r.areaId === "A1").length).toBe(500);
+    expect(result.metrics.needTotal).toBe(5500);
+    expect(result.metrics.needCovered).toBe(5000); // A1's whole need, spread over its 500 dots
+  });
+
+  it("every area with households or need gets at least one dot", () => {
+    const city = makeCity();
+    city.areas[0].households = 1; // tiny next to the others: 3000 * 1 / 500,001 rounds to 0
+    city.areas[1].households = 200_000;
+    city.areas[2].households = 300_000;
+    let result = baseline(makeMission(), city);
     expect(result.residents.filter((r) => r.areaId === "A1").length).toBe(1);
+    expect(result.metrics.needCovered).toBe(100); // that one dot carries all of A1's need
+
+    city.areas[0].households = 0; // need but no households on record
+    result = baseline(makeMission({ id: "zero-households" }), city);
+    expect(result.residents.filter((r) => r.areaId === "A1").length).toBe(1);
+    expect(result.metrics.needCovered).toBe(100);
+  });
+
+  it("dots in an area with no need glow but weigh nothing", () => {
+    const city = makeCity();
+    city.areas[0].households_no_car = 0; // A1: 10 households, no need
+    const result = baseline(makeMission({ id: "no-need-a1" }), city);
+    const a1 = result.residents.filter((r) => r.areaId === "A1");
+    expect(a1.length).toBe(500);
+    expect(a1.every((r) => r.status === "near")).toBe(true);
+    expect(result.metrics.needTotal).toBe(500);
+    expect(result.metrics.needCovered).toBe(0);
+    expect(result.metrics.coverage).toBe(0);
   });
 });
 

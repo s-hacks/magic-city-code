@@ -11,6 +11,8 @@ interface Snapshot {
   problems: ProblemCard[];
   missions: Mission[];
   proposals: Proposal[];
+  /** missionId -> the problem card it was made from (linked on approval). */
+  missionProblems?: Record<string, string>;
 }
 
 export interface StoreOptions {
@@ -67,9 +69,21 @@ export class Store {
   private missions = new Map<string, Mission>();
   private proposals = new Map<string, Proposal>();
   private seedMissionIds = new Set<string>();
+  private missionProblems = new Map<string, string>();
   private saveTimer: NodeJS.Timeout | null = null;
 
   constructor(private opts: StoreOptions = {}) {
+    this.load();
+  }
+
+  /** Fill the store from the seed files, plus the saved file if there is one. */
+  private load() {
+    const opts = this.opts;
+    this.problems.clear();
+    this.missions.clear();
+    this.proposals.clear();
+    this.seedMissionIds.clear();
+    this.missionProblems.clear();
     const seeds = loadSeedMissions(opts.missionsDir);
     for (const m of seeds) {
       this.missions.set(m.id, m);
@@ -80,6 +94,7 @@ export class Store {
       for (const p of saved.problems ?? []) this.problems.set(p.id, p);
       for (const m of saved.missions ?? []) if (!this.seedMissionIds.has(m.id)) this.missions.set(m.id, m);
       for (const p of saved.proposals ?? []) this.proposals.set(p.id, p);
+      for (const [m, p] of Object.entries(saved.missionProblems ?? {})) this.missionProblems.set(m, p);
     }
     // Seed problems are always present, even after a saved store is loaded.
     for (const p of loadSeedProblems(opts.problemsSeedFile ?? PROBLEMS_SEED_FILE)) {
@@ -111,13 +126,34 @@ export class Store {
     this.scheduleSave();
     return m;
   }
+  /** Remember which problem card a not-yet-approved mission came from. */
+  linkMissionToProblem(missionId: string, problemId: string) {
+    this.missionProblems.set(missionId, problemId);
+    this.scheduleSave();
+  }
+
+  /** Approve a mission. Only now does its problem card point at it and say "mission". */
   approveMission(id: string): Mission | undefined {
     const m = this.missions.get(id);
     if (!m) return undefined;
     const approved = { ...m, approved: true };
     this.missions.set(id, approved);
+    const problemId = this.missionProblems.get(id);
+    const card = problemId ? this.problems.get(problemId) : undefined;
+    if (card) this.problems.set(card.id, { ...card, status: "mission", missionId: id });
     this.scheduleSave();
     return approved;
+  }
+
+  /** Back to the seed state: drops everything added at runtime and deletes the saved file. */
+  reset() {
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    if (this.opts.persistPath) fs.rmSync(this.opts.persistPath, { force: true });
+    const persist = this.opts.persistPath;
+    this.opts = { ...this.opts, persistPath: null }; // load seeds only
+    this.load();
+    this.opts = { ...this.opts, persistPath: persist };
   }
 
   listProposals(): Proposal[] {
@@ -143,6 +179,7 @@ export class Store {
         problems: this.listProblems(),
         missions: this.listMissions().filter((m) => !this.seedMissionIds.has(m.id)),
         proposals: this.listProposals(),
+        missionProblems: Object.fromEntries(this.missionProblems),
       };
       try {
         fs.mkdirSync(path.dirname(file), { recursive: true });
