@@ -1,4 +1,4 @@
-// The city-light meter (UI prototype look): a skyline of bars that fill with molten light
+// The city-light meter (UI prototype look): a skyline of bars that fill with gold light
 // from left to right as coverage rises, a dashed goal line, a Vulcan torch that lights at
 // the goal, and the big number ("62% lit · 1,240 families"). The number and the torch's
 // label are always shown, so the result never depends on color.

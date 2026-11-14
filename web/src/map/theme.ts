@@ -1,7 +1,7 @@
 // Colors and blend settings for the deck.gl lights, in one place.
-// Every color here is derived from the UI tokens in ../theme.ts (graphite neutrals plus
-// one molten accent), so swapping that file restyles the CSS, the base map and the lights
-// together. Night is the default look; Day is the brighter projector fallback (D key).
+// Every color here is derived from the UI tokens in ../theme.ts (indigo neutrals plus
+// a gold accent and fixed signal colors), so swapping that file restyles the CSS, the base
+// map and the lights together. Night is the default look; Day is the brighter projector fallback (D key).
 
 import { themes, type ThemeName } from "../theme";
 
@@ -23,7 +23,7 @@ function mix(a: string, b: string, t: number, alpha = 255): RGBA {
 export interface Palette {
   residentFar: RGBA; // unlit: ash
   residentMid: RGBA; // longer walk: ash warming toward the accent
-  residentNear: RGBA; // lit: molten
+  residentNear: RGBA; // lit: gold
   store: RGBA;
   storeLine: RGBA;
   siteFill: RGBA;
@@ -43,22 +43,25 @@ export interface Palette {
 function build(name: ThemeName): Palette {
   const t = themes[name];
   const night = name === "night";
-  // Sites are quiet outlines in the prototype; every kind shares the muted ink.
+  // Signal colors mean the same thing everywhere (docs/ui-plan.md §10):
+  // gold = lit / your hubs, green = grocery stores (fresh food), orange = problems.
+  // Sites are quiet outlines; every kind shares the muted ink.
   const site = rgba(t.muted);
   return {
-    residentFar: rgba(t.ash, night ? 150 : 200),
-    residentMid: mix(t.ash, t.accent, 0.45, night ? 185 : 220),
+    residentFar: rgba(t.ash, night ? 170 : 210),
+    // Only lit residents are gold; a longer walk is still mostly ash, faintly warm.
+    residentMid: mix(t.ash, t.accent, 0.2, night ? 180 : 215),
     residentNear: rgba(t.accent, night ? 245 : 255),
-    store: rgba(t.store),
-    storeLine: rgba(t.store, night ? 150 : 200),
+    store: rgba(t.green),
+    storeLine: rgba(t.green, night ? 150 : 200),
     siteFill: rgba(t.bg, 225),
     siteKind: { church: site, school: site, library: site, community_center: site },
     beam: rgba(t.accent, 235),
     beamHalo: rgba(t.accent, night ? 60 : 70),
     ring: rgba(t.accent, 230),
-    haze: rgba(night ? t.horizon : t.accent).slice(0, 3) as [number, number, number],
-    hazeMaxAlpha: night ? 150 : 45,
-    flare: rgba(t.accent),
+    haze: rgba(t.orange).slice(0, 3) as [number, number, number],
+    hazeMaxAlpha: night ? 55 : 35,
+    flare: rgba(t.orange),
     label: rgba(t.text),
     labelOutline: rgba(t.bg, 235),
     wave: rgba(t.accent),

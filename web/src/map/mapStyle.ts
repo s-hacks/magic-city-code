@@ -44,7 +44,7 @@ function lookFor(name: ThemeName): Look {
     buildingLow: t.buildingLow,
     buildingHigh: t.buildingHigh,
     buildingOpacity: 0.92,
-    motorway: t.roadMajor,
+    motorway: t.violet, // motorways read violet in the "After Dark" map
     major: t.roadMajor,
     minor: t.road,
     casing: night ? t.land : t.line,

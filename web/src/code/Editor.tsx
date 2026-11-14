@@ -2,7 +2,7 @@
 //
 //   <Editor value onChange highlightLine errorLine onRun />
 //
-// highlightLine: molten glow on that line (the line that is placing a hub during the run animation).
+// highlightLine: gold glow on that line (the line that is placing a hub during the run animation).
 // errorLine: red wavy underline on that line (where the Python error is).
 // Ctrl+Enter or Cmd+Enter calls onRun.
 //

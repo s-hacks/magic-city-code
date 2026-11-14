@@ -4,9 +4,9 @@
    status, Sparks question box, report flow, honesty note, plan comparison, the
    printable proposal. Every color is a CSS variable from src/theme.ts. */
 
-a { color: var(--accent); }
+a { color: var(--cyan); }
 a.btn, a.brand { text-decoration: none; color: inherit; }
-a.btn.primary { color: var(--accentInk); }
+a.btn.primary { color: #fff; }
 code { font-family: var(--mono); background: color-mix(in srgb, var(--text) 8%, transparent); border-radius: 5px; padding: 1px 6px; font-size: 0.92em; }
 .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
 .app.plain { background: radial-gradient(circle at 50% 30%, var(--raised), var(--bg)); }
@@ -15,10 +15,10 @@ code { font-family: var(--mono); background: color-mix(in srgb, var(--text) 8%, 
 /* ---------- top bar extras ---------- */
 .pill.status { cursor: default; font-weight: 500; color: var(--muted); }
 .pill.status .pip { width: 8px; height: 8px; border-radius: 50%; background: var(--ash); }
-.pill.status.ok .pip { background: var(--text); }
-.pill.status.loading .pip { background: var(--accent); animation: blink 1.2s infinite; }
-.pill.status.bad { color: var(--accent); }
-.pill.status.bad .pip { background: var(--accent); }
+.pill.status.ok .pip { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.pill.status.loading .pip { background: var(--cyan); animation: blink 1.2s infinite; }
+.pill.status.bad { color: var(--red); }
+.pill.status.bad .pip { background: var(--red); }
 @keyframes blink { 50% { opacity: .3; } }
 
 /* ---------- home: hover card for the deck.gl flares ---------- */
@@ -49,7 +49,12 @@ code { font-family: var(--mono); background: color-mix(in srgb, var(--text) 8%, 
 .link-btn:disabled { color: var(--ash); cursor: not-allowed; }
 
 /* ---------- legend extras ---------- */
-.sw.haze { background: radial-gradient(var(--accent) 0%, transparent 70%); opacity: .7; }
+.sw.haze { background: radial-gradient(var(--orange) 0%, transparent 70%); opacity: .8; }
+/* Signal colors (docs/ui-plan.md §10) on top of index.css: grocery stores are green,
+   problems/flares are orange, errors are red. */
+.sw.store { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.output.is-error .out-line, .out-error { color: var(--red); }
+.flare-hood { color: var(--orange); }
 
 /* ---------- report ---------- */
 .report { position: absolute; z-index: 5; right: 28px; top: 84px; bottom: 28px; width: 560px; max-width: calc(100vw - 56px); padding: 28px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; animation: slide .5s var(--ease) both; --from: 24px; }
@@ -61,12 +66,12 @@ code { font-family: var(--mono); background: color-mix(in srgb, var(--text) 8%, 
 }
 .examples { display: grid; gap: 6px; }
 .example { text-align: left; padding: 8px 12px; border-radius: 12px; border: 1px dashed var(--line); background: transparent; font-size: 14px; cursor: pointer; }
-.example:hover { border-style: solid; border-color: var(--accent); }
-.error-box { margin: 0; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--accent); display: grid; gap: 10px; }
-.error-box p { color: var(--accent); }
+.example:hover { border-style: solid; border-color: var(--violet); }
+.error-box { margin: 0; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--red); display: grid; gap: 10px; }
+.error-box p { color: var(--red); }
 .seed-choices { display: flex; flex-wrap: wrap; gap: 8px; }
 .loading-box { text-align: center; padding: 60px 10px; display: grid; gap: 10px; justify-items: center; }
-.spinner { width: 48px; height: 48px; border-radius: 50%; border: 4px solid var(--raised); border-top-color: var(--accent); animation: spin 1s linear infinite; }
+.spinner { width: 48px; height: 48px; border-radius: 50%; border: 4px solid var(--raised); border-top-color: var(--cyan); animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .facts, .level-list { margin: 0; padding-left: 22px; display: grid; gap: 4px; }
 .approve-row { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -77,24 +82,24 @@ code { font-family: var(--mono); background: color-mix(in srgb, var(--text) 8%, 
 .paper-tools { display: flex; align-items: center; gap: 12px; width: min(820px, 94vw); }
 .paper-tools label { white-space: nowrap; font-weight: 600; }
 .paper-tools input { max-width: 260px; }
-.ok-text { color: var(--accent); font-weight: 700; }
-.paper { width: min(820px, 94vw); background: #fff; color: #111114; border-radius: 6px; padding: 38px 46px; box-shadow: 0 10px 50px rgba(0, 0, 0, .5); }
+.ok-text { color: var(--green); font-weight: 700; }
+.paper { width: min(820px, 94vw); background: #fff; color: #0E1230; border-radius: 6px; padding: 38px 46px; box-shadow: 0 10px 50px rgba(0, 0, 0, .5); }
 .paper h1 { font-size: 34px; margin: 4px 0 6px; }
-.paper-kicker { color: #c2410c; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: 12px; }
-.paper .by { color: #55555f; margin-bottom: 14px; }
-.paper .to { font-size: 19px; border-left: 3px solid #f04e0f; padding-left: 12px; }
+.paper-kicker { color: #6D3FE0; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: 12px; }
+.paper .by { color: #4E5582; margin-bottom: 14px; }
+.paper .to { font-size: 19px; border-left: 3px solid #6D3FE0; padding-left: 12px; }
 .paper-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: center; margin: 16px 0; }
 .stat-row { display: flex; align-items: center; gap: 12px; }
 .stat .n { font-size: 44px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; }
-.stat .l { font-size: 14px; color: #55555f; max-width: 150px; }
-.stat.good .n { color: #c2410c; }
-.arrow { font-size: 32px; color: #8a8a94; }
+.stat .l { font-size: 14px; color: #4E5582; max-width: 150px; }
+.stat.good .n { color: #0FA875; }
+.arrow { font-size: 32px; color: #8C93BC; }
 .helped { margin-top: 10px; }
-.snap { width: 100%; border-radius: 8px; border: 1px solid #d3d3d9; }
+.snap { width: 100%; border-radius: 8px; border: 1px solid #D5D9F0; }
 .paper .summary { font-size: 19px; }
 .paper h3 { font-size: 19px; margin-top: 14px; }
-.paper pre.code { font-family: var(--mono); background: #f7f7f8; border: 1px solid #d3d3d9; border-radius: 8px; padding: 12px 14px; font-size: 15px; white-space: pre-wrap; margin: 6px 0 14px; }
-.paper .label { font-size: 14px; color: #55555f; border-top: 1px solid #d3d3d9; padding-top: 10px; margin: 0; font-weight: 600; }
+.paper pre.code { font-family: var(--mono); background: #F3F4FB; border: 1px solid #D5D9F0; border-radius: 8px; padding: 12px 14px; font-size: 15px; white-space: pre-wrap; margin: 6px 0 14px; }
+.paper .label { font-size: 14px; color: #4E5582; border-top: 1px solid #D5D9F0; padding-top: 10px; margin: 0; font-weight: 600; }
 
 @media print {
   html, body, #root { height: auto; overflow: visible; background: #fff; }
