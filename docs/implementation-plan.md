@@ -93,7 +93,7 @@ All data is public. One script, `data/build.py`, downloads it, trims it to Birmi
 
 | File produced | What it holds | Source | Status |
 |---|---|---|---|
-| `areas.json` | Census block groups in Birmingham: shape, households, households with no car, kids, seniors | Census ACS 5-year (Jefferson County, FIPS 01073) + Census boundary files | Reliable |
+| `areas.json` | Census block groups in Birmingham: shape, households, households with no car, households in poverty, kids, seniors, households with no internet | Census ACS 5-year (Jefferson County, FIPS 01073) + Census boundary files | Reliable. Confirm the internet table is published for block groups; if not, use tract values. These columns power the missions in [showcase-examples.md](showcase-examples.md). |
 | `stores.json` | Existing supermarkets, whole city | OpenStreetMap (one Overpass query) | Check the focus area by eye and fix by hand |
 | `sites.json` | Places that could host a hub: churches, schools, libraries, rec centers | OpenStreetMap (same query) | Reliable |
 | `neighborhoods.json` | 8–10 named neighborhoods with map boxes (Ensley, West End, Woodlawn, East Lake, ...) | Written by hand | 15 minutes of work |
