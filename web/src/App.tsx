@@ -4,6 +4,7 @@ import type { LayerGroup } from './map/style';
 import Home from './pages/Home';
 import Mission, { type RunState } from './pages/Mission';
 import ChallengePage from './pages/Challenge';
+import ChallengeList from './pages/ChallengeList';
 import { challenges } from './challenges';
 import type { EditorHandle } from './code/Editor';
 import { applyCssVars, type ThemeName } from './theme';
@@ -13,7 +14,8 @@ const RESULT_AT_MS = 2400; // when the meter fills, after the last ring has ripp
 
 export default function App() {
   const [theme, setTheme] = useState<ThemeName>('night');
-  const [screen, setScreen] = useState<'home' | 'mission' | 'challenge'>('home');
+  const [screen, setScreen] = useState<'home' | 'mission' | 'challenge' | 'list'>('home');
+  const [listTab, setListTab] = useState<'practice' | 'city'>('practice');
   const [problems, setProblems] = useState<Problem[]>(seedProblems);
   const [hidden, setHidden] = useState<Set<LayerGroup>>(new Set());
   const [compare, setCompare] = useState(false);
@@ -113,7 +115,7 @@ export default function App() {
 
   return (
     <div className="app" data-screen={screen}>
-      {screen !== 'challenge' && <MapView
+      {screen !== 'challenge' && screen !== 'list' && <MapView
         theme={theme} screen={screen} hidden={hidden} problems={problems}
         hubs={hubs} runId={runId} compare={compare}
         onFlare={open}
@@ -127,10 +129,14 @@ export default function App() {
           problems={problems}
           onOpen={open}
           onReport={(p) => setProblems((ps) => [...ps, p])}
+          onBrowse={(t) => { setListTab(t); setScreen('list'); }}
         />
       )}
       {screen === 'challenge' && (
-        <ChallengePage ch={challenges['route-to-fresh-food']} theme={theme} onHome={() => setScreen('home')} onTheme={() => setTheme((t) => (t === 'night' ? 'day' : 'night'))} />
+        <ChallengePage ch={challenges['route-to-fresh-food']} theme={theme} onHome={() => setScreen('home')} onList={() => { setListTab('practice'); setScreen('list'); }} onTheme={() => setTheme((t) => (t === 'night' ? 'day' : 'night'))} />
+      )}
+      {screen === 'list' && (
+        <ChallengeList tab={listTab} onTab={setListTab} onHome={() => setScreen('home')} onOpen={(p) => p.open && setScreen(p.open)} />
       )}
       {screen === 'mission' && (
         <Mission
