@@ -21,3 +21,5 @@ Sources (all public):
 Known gaps: OSM store coverage in west Birmingham is thin (check by hand); only a few community centers are tagged.
 
 Closed stores: `CLOSED_STORES` in `build.py` is a hand-kept list (OSM id -> closed_since, note). Those stores are dropped from `stores.json` and written to `former_stores.json` (West End Save-A-Lot, closed 2023-09).
+
+Stores are kept if within 2.5 km of the city boundary (`STORE_BUFFER_M`), since residents of edge neighborhoods shop just over the line (Fairfield, Midfield, Homewood...). Sites and areas stay inside the city only. A second, wider Overpass query (cached as `overpass_stores_buffer.json`) covers the buffer.

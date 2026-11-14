@@ -74,6 +74,11 @@ CLOSED_STORES = {
     # (BirminghamWatch Jan 2025; Bham Now 2023-09-06; research_notes/.../economy_housing_food.md).
     "w252203019": {"closed_since": "2023-09",
                    "note": "Closed in September 2023; the building has been empty since (BirminghamWatch, Bham Now). City approved $600K in Jan 2025 for a new store here."},
+    # Winn-Dixie on Montevallo Rd (Mountain Brook edge). Winn-Dixie left Birmingham entirely; the last two stores
+    # (500 Inverness Corners, 4476 Montevallo Rd) closed March 2026 (Bham Now, research_notes economy_housing_food.md).
+    # drop_only: removed from stores.json but NOT written to former_stores.json (not a demo comparison site).
+    "w351676262": {"closed_since": "2026-03", "drop_only": True,
+                   "note": "Winn-Dixie closed its last Birmingham-area stores in March 2026 (Bham Now)."},
 }
 
 
@@ -250,6 +255,20 @@ def element_point(e):
     return (c["lon"], c["lat"]) if c else (None, None)
 
 
+STORE_BUFFER_M = 2500  # supermarkets within this distance of the city boundary are kept
+
+
+def buffered_city(city, meters):
+    """Buffer a lon/lat polygon by `meters` using a local metric projection (equirectangular at city latitude)."""
+    from shapely.ops import transform
+    lat0 = city.centroid.y
+    import math
+    kx, ky = 111320 * math.cos(math.radians(lat0)), 110574
+    fwd = lambda x, y, z=None: (x * kx, y * ky)
+    inv = lambda x, y, z=None: (x / kx, y / ky)
+    return transform(inv, transform(fwd, city).buffer(meters))
+
+
 def osm_features(city):
     minx, miny, maxx, maxy = city.bounds
     bb = f"{miny:.4f},{minx:.4f},{maxy:.4f},{maxx:.4f}"
@@ -264,17 +283,37 @@ def osm_features(city):
 );
 out center tags;"""
     els = overpass(q, "overpass_all.json")["elements"]
+    # Supermarkets: also keep those within STORE_BUFFER_M of the city line (residents walk across the border).
+    buf = buffered_city(city, STORE_BUFFER_M)
+    bx0, by0, bx1, by1 = buf.bounds
+    qs = f"""[out:json][timeout:200];
+(
+ nwr["shop"="supermarket"]({by0:.4f},{bx0:.4f},{by1:.4f},{bx1:.4f});
+ nwr["shop"="grocery"]({by0:.4f},{bx0:.4f},{by1:.4f},{bx1:.4f});
+);
+out center tags;"""
+    store_els = overpass(qs, "overpass_stores_buffer.json")["elements"]
+    bufp = prep(buf)
     cityp = prep(city)
     stores, sites, former = [], [], []
     seen = set()
+    seen_store = set()
     grocery_ok = re.compile(r"market|grocer|foods?|fresh|supermarket|piggly|kroger|publix|walmart|aldi|save|winn|sprouts|whole|costco|sam'?s|target|food", re.I)
     bad = re.compile(r"dollar|family dollar|7-eleven|shell|chevron|exxon|rite aid|cvs|walgreens|gas|mart express|convenience|liquor|tobacco|smoke|mexican|meat depot|restaurant|bakery|butcher", re.I)
-    for e in els:
+    for e in els + store_els:
         t = e.get("tags", {})
         name = (t.get("name") or "").strip()
         lon, lat = element_point(e)
-        if lon is None or not name or not cityp.contains(Point(lon, lat)):
+        is_store = t.get("shop") in ("supermarket", "grocery")
+        if lon is None or not name:
             continue
+        pt = Point(lon, lat)
+        if not (bufp.contains(pt) if is_store else cityp.contains(pt)):
+            continue
+        if is_store:
+            if f"store_{e['type'][0]}{e['id']}" in seen_store:
+                continue
+            seen_store.add(f"store_{e['type'][0]}{e['id']}")
         eid = f"{e['type'][0]}{e['id']}"
         rec = {"name": name, "lat": r5(lat), "lon": r5(lon)}
         if t.get("shop") in ("supermarket", "grocery"):
@@ -283,9 +322,12 @@ out center tags;"""
             if t["shop"] == "grocery" and not grocery_ok.search(name):
                 continue
             if eid in CLOSED_STORES:
-                former.append({"id": f"store_{eid}", **rec, **CLOSED_STORES[eid]})
+                if not CLOSED_STORES[eid].get("drop_only"):
+                    former.append({"id": f"store_{eid}", **rec, **{k: v for k, v in CLOSED_STORES[eid].items() if k != "drop_only"}})
                 continue
             stores.append({"id": f"store_{eid}", **rec})
+            if not cityp.contains(pt):
+                print(f"  outside-city store kept: {name} ({t.get('addr:city', '?')}) {lat:.5f},{lon:.5f} {eid}")
             continue
         am = t.get("amenity")
         kind = {"place_of_worship": "church", "school": "school", "library": "library",
