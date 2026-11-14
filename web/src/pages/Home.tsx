@@ -68,7 +68,7 @@ export function Home() {
             </button>
           ))}
         </div>
-        <p className="tiny">{problems.length} problems reported · hover a flare to read it</p>
+        <p className="tiny">{problems.length} problems reported · hover a flare to read it · <button className="link-btn" onClick={() => nav("/challenges")}>Browse all challenges</button></p>
       </section>
 
       {hovered && (

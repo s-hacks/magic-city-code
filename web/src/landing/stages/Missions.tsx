@@ -159,6 +159,7 @@ export default function Missions({ active, go }: StageProps) {
           <p className="ms-cta-line">Open {first?.place ?? 'a neighborhood'} and <span className="lp-accent">light it up.</span></p>
           <div className="ms-cta-btns">
             {first && <Link className="lp-btn primary" to={first.href}>Start {first.title} <Arrow /></Link>}
+            <Link className="lp-btn ghost" to="/challenges">All challenges</Link>
             <Link className="lp-btn ghost" to="/city">Open the city map</Link>
             <button className="lp-btn ghost" onClick={() => go('hero')}>Back to the city</button>
           </div>

@@ -19,7 +19,7 @@ const store = { // per-viewer draft; storage may be unavailable
   set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* ignore */ } },
 };
 
-export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome, onTheme }: { ch: Challenge<D, T>; theme: ThemeName; onHome: () => void; onTheme: () => void }) {
+export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome, onList, onTheme }: { ch: Challenge<D, T>; theme: ThemeName; onHome: () => void; onList: () => void; onTheme: () => void }) {
   const mapBox = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const viz = useRef<Viz<T> | null>(null);
@@ -118,7 +118,9 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
   };
 
   // --- run / submit ----------------------------------------------------------------
+  const [queued, setQueued] = useState<'run' | 'submit' | null>(null);
   const execute = async (kind: 'run' | 'submit', o: RunOptions = opts) => {
+    if (py === 'loading') { setQueued(kind); return; } // run as soon as Python is ready
     if (!data || busy || py !== 'ready' || !editor.current) return;
     const code = editor.current.getCode();
     store.set(draftKey, code);
@@ -149,6 +151,11 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
     setSel(pick);
     showRow(out[pick], o);
   };
+
+  useEffect(() => {
+    if (py === 'ready' && queued) { setQueued(null); execute(queued); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [py, queued]);
 
   const toggleFlood = () => {
     const o = { flood: !flood };
@@ -185,7 +192,7 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
       <header className="cbar">
         <button className="brand link" onClick={onHome} title="Home (H)"><Mark /> Magic City Code</button>
         <div className="ctitle">
-          <span className="crumb">Challenges /</span> {ch.title}
+          <button className="crumb link-btn quiet" onClick={onList}>Challenges /</button> {ch.title}
           <span className={`diff ${ch.difficulty.toLowerCase()}`}>{ch.difficulty}</span>
         </div>
         <button className="icon-btn" onClick={onTheme} title="Projector mode (D)" aria-label="Toggle projector mode">{theme === 'night' ? '☀' : '☾'}</button>
@@ -208,11 +215,11 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
           </div>
           <div className="code-body"><Editor ref={editor} initial={store.get(draftKey) ?? ch.starterCode} /></div>
           <div className="actions">
-            <span className="tiny status">{py === 'loading' ? <><i className="spin" /> Loading Python…</> : py === 'failed' ? 'Python failed to load. Check your connection.' : '⌘↵ to run'}</span>
-            <button className="btn ghost" disabled={!!busy || py !== 'ready'} onClick={() => execute('run')} title="Run visible tests (R)">
+            <span className="tiny status">{py === 'loading' ? <><i className="spin" /> {queued ? `Loading Python… will ${queued} when ready` : 'Loading Python…'}</> : py === 'failed' ? 'Python failed to load. Check your connection.' : '⌘↵ to run'}</span>
+            <button className="btn ghost" disabled={!!busy || py === 'failed'} onClick={() => execute('run')} title="Run visible tests (R)">
               {busy === 'run' ? <i className="spin" /> : '▶'} Run
             </button>
-            <button className="btn submit" disabled={!!busy || py !== 'ready'} onClick={() => execute('submit')} title="Submit: all tests (S)">
+            <button className="btn submit" disabled={!!busy || py === 'failed'} onClick={() => execute('submit')} title="Submit: all tests (S)">
               {busy === 'submit' ? <i className="spin" /> : null} Submit
             </button>
           </div>

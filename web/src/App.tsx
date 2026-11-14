@@ -1,8 +1,8 @@
 // Routes: / (landing: the mission list), /city (the city map with problem flares),
-// /report, /mission/:id, /challenge/:id, /proposal/:id.
+// /challenges (practice list + city problems), /report, /mission/:id, /challenge/:id, /proposal/:id.
 // Visiting /?reset=1 wipes this app's saved state (demo reset) and returns to /.
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Home } from "./pages/Home";
 import { Report } from "./pages/Report";
 import { MissionPage } from "./pages/Mission";
@@ -13,6 +13,21 @@ import { challenges } from "./challenges";
 // The landing (three.js) and the challenge page (its own Pyodide worker) load on demand.
 const Landing = lazy(() => import("./landing/Landing"));
 const ChallengePage = lazy(() => import("./pages/Challenge"));
+const ChallengeList = lazy(() => import("./pages/ChallengeList"));
+
+function ChallengesRoute() {
+  const [params, setParams] = useSearchParams();
+  const nav = useNavigate();
+  const tab = params.get("tab") === "city" ? "city" : "practice";
+  return (
+    <ChallengeList
+      tab={tab}
+      onTab={(t) => setParams(t === "city" ? { tab: "city" } : {}, { replace: true })}
+      onHome={() => nav("/")}
+      onOpen={(p) => p.open && nav(p.open === "challenge" ? `/challenge/${p.id}` : `/mission/${p.id}`)}
+    />
+  );
+}
 
 function ChallengeRoute() {
   const { id = "" } = useParams();
@@ -21,7 +36,7 @@ function ChallengeRoute() {
   const ch = challenges[id as keyof typeof challenges];
   if (!ch) return <Navigate to="/" replace />;
   // The registry mixes challenge data types; the page is generic over them.
-  return <ChallengePage ch={ch as Parameters<typeof import("./pages/Challenge").default>[0]["ch"]} theme={dayMode ? "day" : "night"} onHome={() => nav("/#missions")} onTheme={toggleDay} />;
+  return <ChallengePage ch={ch as Parameters<typeof import("./pages/Challenge").default>[0]["ch"]} theme={dayMode ? "day" : "night"} onHome={() => nav("/#missions")} onList={() => nav("/challenges")} onTheme={toggleDay} />;
 }
 
 function clearKeys(store: Storage) {
@@ -67,6 +82,7 @@ export function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/city" element={<Home />} />
+      <Route path="/challenges" element={<ChallengesRoute />} />
       <Route path="/challenge/:id" element={<ChallengeRoute />} />
       <Route path="/report" element={<Report />} />
       <Route path="/mission/:id" element={<MissionPage />} />
