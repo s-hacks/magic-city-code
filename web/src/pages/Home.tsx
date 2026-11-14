@@ -1,6 +1,7 @@
-// Home (UI prototype look): the city at night with the fly-in, one flare per resident
-// problem (hover one to read it, click one that has a mission to open it), the hero with a
-// start button per ready mission, and "Report a problem" in the top bar.
+// Home (as in the UI prototype): the city at night with the fly-in, one flare per resident
+// problem (hover one to read it, click one that has a mission to open it), and the hero with
+// the app's two ways in: "Browse challenges" (/challenges) and "Solve a real city problem"
+// (/challenges?tab=city). "Report a problem" is in the top bar.
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ProblemCard } from "@mcc/shared";
@@ -36,7 +37,6 @@ export function Home() {
   const canOpen = (p: ProblemCard) => !!p.missionId && approved.has(p.missionId);
   const openProblem = (p?: ProblemCard) => p && canOpen(p) && nav(`/mission/${p.missionId}`);
   const hovered = problems.find((p) => p.id === hover);
-  const [first, ...rest] = missions;
 
   return (
     <div className="app" data-screen="home">
@@ -57,18 +57,10 @@ export function Home() {
         <h1>Write code that <em>lights up</em> the Magic City.</h1>
         <p className="lede">Every dot is a family. Every flare is a real problem a neighbor told us about. Pick one, write a little Python, and watch your neighborhood glow.</p>
         <div className="hero-actions">
-          {first && (
-            <button className="btn primary big" onClick={() => nav(`/mission/${first.id}`)}>
-              Start: {first.title} in {hoodName(first.neighborhood)} <span aria-hidden>→</span>
-            </button>
-          )}
-          {rest.map((m) => (
-            <button key={m.id} className="btn ghost" onClick={() => nav(`/mission/${m.id}`)}>
-              {m.title} · {hoodName(m.neighborhood)}
-            </button>
-          ))}
+          <button className="btn big primary" onClick={() => nav("/challenges")}>Browse challenges <span aria-hidden>→</span></button>
+          <button className="btn big ghost" onClick={() => nav("/challenges?tab=city")}>Solve a real city problem</button>
         </div>
-        <p className="tiny">{problems.length} problems reported · hover a flare to read it · <button className="link-btn" onClick={() => nav("/challenges")}>Browse all challenges</button></p>
+        <p className="tiny">{problems.length} problems reported · click a flare to jump straight in</p>
       </section>
 
       {hovered && (

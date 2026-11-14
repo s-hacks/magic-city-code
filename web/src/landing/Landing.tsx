@@ -96,8 +96,7 @@ export default function Landing() {
           <span key={cur} className="lp-count-n">{String(i + 1).padStart(2, '0')}</span>
           <span className="lp-count-of">/ {String(ids.length).padStart(2, '0')}</span>
         </div>
-        <button className="lp-btn primary" onClick={() => go('missions')}>See the missions <Arrow /></button>
-        <Link className="lp-btn ghost" to="/city">City map</Link>
+        <Link className="lp-btn primary" to="/city">Open the app <Arrow /></Link>
       </header>
 
       <main id="stage" className="lp-stages" style={{ '--ox': `${origin.x}%`, '--oy': `${origin.y}%` } as React.CSSProperties}>
