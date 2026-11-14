@@ -45,20 +45,33 @@ Node 20.17 or newer and pnpm 9. More in the [README](README.md).
 
 ## Who owns what (explain-back)
 
-Each person should be able to walk a judge through their own part, and explain someone else's part for two minutes before the demo.
+Four people, four areas. Each person can walk a judge through their own part, and explains someone else's part for two minutes before the demo.
 
-| Part | Folder | Owner |
+| Owner | Area | What they own |
 |---|---|---|
-| Engine and shared types | `web/src/engine/`, `shared/` | TODO: name |
-| Data pipeline | `data/` | TODO: name |
-| Server, generator, coach | `server/` | TODO: name |
-| 3D map | `web/src/map/` | TODO: name |
-| Python editor and worker | `web/src/code/`, `web/src/py/` | TODO: name |
-| Screens, landing page, theme | `web/src/pages/`, `web/src/landing/`, `web/src/theme.ts` | TODO: name |
-| Challenges | `web/src/challenges/` | TODO: name |
-| City problems workspace | `web/src/workspace/`, `server/src/cityProblems.ts` | TODO: name |
+| **Pranay** | Backend | `server/` (Express routes, mission generator, coach, scrub step, approval gate, fallbacks, city problems API), `shared/` (types and API shapes), `data/` (Census and OpenStreetMap pipeline), and the pure engine in `web/src/engine/` |
+| **Margulan** | Frontend | `web/src/pages/`, `web/src/mission/`, `web/src/map/`, `web/src/landing/`, `web/src/app/`, `theme.ts` and the stylesheets, the workspace screen in `web/src/workspace/`, and the editor and Pyodide runner in `web/src/code/` and `web/src/py/` |
+| **Gaurav** | Challenges and tests | `web/src/challenges/` (Route to Fresh Food, Stray-Dog Van, Water Bill Check, Open Bed, the harnesses and checkers), the challenge data scripts in `web/scripts/`, the seed city-problem projects and their tests in `web/public/data/city-problems/`, and the test suites (`*.test.ts`, `*.node.test.ts`, `server/test/`) |
+| **Kavya** | Research | `reports/` and `research_notes/`, and the real problems and facts behind the missions: `docs/top-problems.md`, `docs/showcase-examples.md`, the problem cards and the sourced facts on the landing page (`web/src/landing/facts.ts`) |
 
-The git history shows two committers so far: Pranay Joshi and Margulan Baizhakyp.
+Files that sit between two areas (for example the workspace, which has a server half and a screen half) are owned by whoever wrote that half. The AI log says who asked for each AI-written change.
+
+### Explain-back plan
+
+Do this once, before the demo. Each pair swaps and the listener explains the other's part back in two minutes, using the files above.
+
+| Explainer | Explains | Starting file |
+|---|---|---|
+| Pranay | Frontend | `web/src/mission/MissionScreen.tsx` |
+| Margulan | Challenges | `web/src/challenges/types.ts` |
+| Gaurav | Research | `reports/Birmingham Alabama city problems.md` |
+| Kavya | Backend | `server/src/app.ts` and `docs/decisions.md` |
+
+Questions each person should be ready for:
+- **Pranay:** why does the student's code return actions instead of drawing? How is a generated mission's target set?
+- **Margulan:** how does the map get its colors? What happens when a run is cancelled?
+- **Gaurav:** how was each pass mark chosen? What do the hidden tests catch that the visible ones do not?
+- **Kavya:** where does each number come from, and what are the honest limits?
 
 ## Open questions (ask an organizer)
 
@@ -70,7 +83,6 @@ The git history shows two committers so far: Pranay Joshi and Margulan Baizhakyp
 ## Before the deadline
 
 - [ ] Merge `build` into `main` and push `main` (judges will likely open the default branch).
-- [ ] Fill in the owner names above.
 - [ ] Record the backup video.
 - [ ] Keep `docs/ai-log.md` current for anything added after this pass.
 - [ ] Rehearse the demo once on the projector or TV.

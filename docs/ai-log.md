@@ -2,7 +2,9 @@
 
 One entry per meaningful AI-written piece. Dates and files come from `git log main..build`. Newest entries go at the bottom.
 
-Format: date, what was asked, what was kept, what was changed or rejected, and why. "reason: ask the owner" means the reason is not in the plan, a commit or the conversation.
+Format: date, what was asked, what was kept, what was changed or rejected, and why. "reason: ask <name>" means the reason is not in the plan, a commit or the conversation, so ask the named owner.
+
+Team owners: **Pranay** (backend: server, shared, data, engine), **Margulan** (frontend: screens, map, landing, editor), **Gaurav** (challenges and tests), **Kavya** (research). "Owner area" in each entry names the folder or the AI agent that did the work; the human who owns that folder is listed in [SUBMISSION.md](../SUBMISSION.md).
 
 ---
 
@@ -11,7 +13,7 @@ Format: date, what was asked, what was kept, what was changed or rejected, and w
 - **Owner area:** coordinator
 - **Asked:** write the shared types (data, mission, engine, API) and the worker protocol before any agent starts, so agents can work in parallel on fixed names.
 - **Kept:** the types in `shared/`, the pnpm workspace, the Vite and TypeScript setup.
-- **Changed or rejected:** no record of rejected options in the commits. reason: ask the owner.
+- **Changed or rejected:** no record of rejected options in the commits. reason: ask Pranay.
 
 ## 2. Claude Code subagent roster
 - **Date:** 2026-11-14 (commit 2e228b9)

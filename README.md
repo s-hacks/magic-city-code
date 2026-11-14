@@ -21,6 +21,17 @@ Demo shortcuts:
 - **⌘/Ctrl+Enter** runs your code.
 - Before a demo, visit **http://localhost:5173/?reset=1** to clear saved state.
 
+## Team
+
+| Who | Area |
+|---|---|
+| Pranay | Backend: `server/`, `shared/`, `data/`, the engine |
+| Margulan | Frontend: screens, map, landing page, editor |
+| Gaurav | Challenges and tests |
+| Kavya | Research |
+
+Full folder ownership and the explain-back plan: [SUBMISSION.md](SUBMISSION.md).
+
 ## Tests
 
 ```bash
