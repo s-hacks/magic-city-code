@@ -1,0 +1,86 @@
+{
+  "id": "feed-the-block",
+  "title": "Feed the Block",
+  "story": "The Save-A-Lot in West End closed in 2023. Now the nearest grocery store is far away, and many families here do not have a car. Churches, schools and libraries are places people already know and trust. If a pickup hub opened at one of them, groceries could be dropped off close to home. Your job is to choose where the hubs go so that more households with no car are within a 10-minute walk of food. Walk times on the map are straight-line estimates.",
+  "residentQuote": "There's no grocery store near West End, and I don't have a car.",
+  "partner": "Jones Valley Teaching Farm · Shipt",
+  "type": "coverage",
+  "area": {
+    "neighborhood": "west-end",
+    "bbox": [
+      -86.88778,
+      33.46703,
+      -86.83385,
+      33.50573
+    ]
+  },
+  "thing": "pickup hub",
+  "siteKinds": [
+    "church",
+    "school",
+    "library"
+  ],
+  "needColumn": "households_no_car",
+  "walkMinutes": 10,
+  "levels": [
+    {
+      "number": 1,
+      "title": "Place your first pickup hub",
+      "concept": "Calling a function",
+      "instructions": "A function is a button you can press with code. `city.place_hub(...)` puts one pickup hub on the map. Put the name of a place inside the parentheses, in quotes. Place one pickup hub at West End Branch Library. Then press Run and watch the map.",
+      "goal": {
+        "metric": "coverage",
+        "target": 0.22
+      },
+      "maxPlacements": 1,
+      "starterCode": "# Level 1: place one pickup hub\n# These two lines look at the first place on the list.\nplaces = city.sites()\nprint(places[0])\n\n# Your turn: call city.place_hub with the name of the place, in quotes.\n",
+      "solution": "city.place_hub(\"West End Branch Library\")\n",
+      "hints": [
+        "A function call has a name, then parentheses. What goes inside the parentheses is the thing the function should use. Names of places go in quotes.",
+        "Look at the line that starts with `print`. It already calls a function and puts something inside the parentheses. Your line looks the same, but it uses `city.place_hub` instead of `print`.",
+        "Here is a different problem. A lunch app has a function called `lunch.add_item`. To add an apple to the tray you would write: lunch.add_item(\"apple\")  The function name comes first and the thing to add goes inside the parentheses, in quotes."
+      ]
+    },
+    {
+      "number": 2,
+      "title": "Place five pickup hubs with a loop",
+      "concept": "Loops",
+      "instructions": "Writing `city.place_hub` 5 times is slow. A loop does the same job again and again for you. `city.sites()` gives you a list of places. Use a `for` loop to place a pickup hub at the first 5 places on the list. Then press Run.",
+      "goal": {
+        "metric": "coverage",
+        "target": 0.35
+      },
+      "maxPlacements": 5,
+      "starterCode": "# Level 2: place 5 pickup hubs with a loop\nplaces = city.sites()\nprint(\"There are\", len(places), \"places to choose from.\")\n\n# Your turn: use a for loop to place a pickup hub at the first 5 places.\n",
+      "solution": "places = city.sites()\nfor place in places[:5]:\n    city.place_hub(place)\n",
+      "hints": [
+        "A `for` loop says: do this once for each thing in a list. Which list do you have? What should happen for each place?",
+        "A loop starts with `for something in a_list:` and the lines that repeat are indented under it. To use only the first few items of a list, you can cut it with square brackets, like `my_list[:3]`. You want 5.",
+        "Here is a different problem. You have a list of pets and want to say hello to the first 3:\n\npets = [\"Milo\", \"Bean\", \"Pip\", \"Rex\"]\nfor pet in pets[:3]:\n    print(\"Hi\", pet)\n\nThe word after `for` is a name you pick. It stands for one pet each time round the loop."
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Pick the 5 best places",
+      "concept": "Sorting and choosing",
+      "instructions": "The first 5 places on the list are not always the best ones. Each place has `families_nearby`. Here that means households with no car within a 10-minute walk. Sort the places so the biggest number comes first. Then pick 5 pickup hubs from the top. One catch: the top places are often right next to each other, and two pickup hubs side by side help the same households. Skip a place if both its `lat` and its `lon` are less than 0.01 away from a place you already picked. Then press Run.",
+      "goal": {
+        "metric": "coverage",
+        "target": 0.54
+      },
+      "maxPlacements": 5,
+      "starterCode": "# Level 4: sort, then choose\nplaces = city.sites()\nchosen = []   # the places you pick will go in here\n\n# Step 1: sort places so the most families_nearby come first.\n# Step 2: go down the sorted list. Pick a place unless it is\n#         too close to one in chosen. Stop at 5.\n# Remember to call city.place_hub for each place you pick.\n",
+      "solution": "places = city.sites()\nbest = sorted(places, key=lambda p: p.families_nearby, reverse=True)\nchosen = []\nfor place in best:\n    if len(chosen) == 5:\n        break\n    too_close = False\n    for other in chosen:\n        if abs(place.lat - other.lat) < 0.01 and abs(place.lon - other.lon) < 0.01:\n            too_close = True\n    if not too_close:\n        chosen.append(place)\n        city.place_hub(place)\n",
+      "hints": [
+        "Do it in two parts. First, put the places in the right order. Then, choose from the top of the list. Try printing the first few sorted places. Where are they on the map?",
+        "To sort, use `sorted(list, key=..., reverse=True)`. The `key` tells Python which number to sort by. For each place you look at, ask: is it too close to anyone already in `chosen`? If not, add it to `chosen`.",
+        "Here is a different problem. Pick the 3 best snacks, but never two of the same kind:\n\nsnacks = sorted(snacks, key=lambda s: s.rating, reverse=True)\npicked = []\nfor snack in snacks:\n    if len(picked) == 3:\n        break\n    kinds = [p.kind for p in picked]\n    if snack.kind not in kinds:\n        picked.append(snack)\n\nHere the test is about `kind`. Yours is about how close two places are."
+      ]
+    }
+  ],
+  "source": {
+    "kind": "seed",
+    "text": "There's no grocery store near West End, and I don't have a car."
+  },
+  "approved": true
+}

@@ -1,0 +1,63 @@
+[
+  {
+    "id": "prob_seed_1",
+    "text": "There's no grocery store near West End, and I don't have a car.",
+    "neighborhood": "west-end",
+    "status": "mission",
+    "missionId": "feed-the-block",
+    "createdAt": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "prob_seed_2",
+    "text": "My kids can't do their homework online at home.",
+    "neighborhood": "ensley",
+    "status": "mission",
+    "missionId": "homework-hotspots",
+    "createdAt": "2026-11-01T00:01:00.000Z"
+  },
+  {
+    "id": "prob_seed_3",
+    "text": "On cold nights, where can people near me go to get warm?",
+    "neighborhood": "southside",
+    "status": "mission",
+    "missionId": "warm-nights",
+    "createdAt": "2026-11-01T00:02:00.000Z"
+  },
+  {
+    "id": "prob_seed_4",
+    "text": "With no Saturday bus, I can't get to the store on my day off.",
+    "neighborhood": "east-lake",
+    "status": "mission",
+    "missionId": "saturday-shuttle",
+    "createdAt": "2026-11-01T00:03:00.000Z"
+  },
+  {
+    "id": "prob_seed_5",
+    "text": "The produce truck never comes to our side of the neighborhood.",
+    "neighborhood": "woodlawn",
+    "status": "mission",
+    "missionId": "farm-stand-route",
+    "createdAt": "2026-11-01T00:04:00.000Z"
+  },
+  {
+    "id": "prob_seed_6",
+    "text": "My water bill is the same round number every month, and when I call nobody picks up.",
+    "neighborhood": null,
+    "status": "needs_new_type",
+    "createdAt": "2026-11-01T00:05:00.000Z"
+  },
+  {
+    "id": "prob_seed_7",
+    "text": "The bus is late so often that I can't count on it to get to work on time.",
+    "neighborhood": null,
+    "status": "needs_new_type",
+    "createdAt": "2026-11-01T00:06:00.000Z"
+  },
+  {
+    "id": "prob_seed_8",
+    "text": "Somebody dumped trash in the empty lot on our street and it has been there for weeks.",
+    "neighborhood": null,
+    "status": "new",
+    "createdAt": "2026-11-01T00:07:00.000Z"
+  }
+]
