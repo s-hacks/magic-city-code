@@ -40,6 +40,8 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
   const [len, setLen] = useState(0);
   const [playing, setPlaying] = useState(false);
   const draftKey = `draft:${ch.id}`;
+  // The student's code while the Solution button has the reference solution loaded.
+  const [mine, setMine] = useState<string | null>(null);
   // Sparks' chat history: collapsed to its latest reply until the student asks something.
   const [agent, setAgent] = useState(false);
   const [ask, setAsk] = useState<{ action: ChallengeCoachAction; n: number } | null>(null);
@@ -181,9 +183,9 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
       const key = e.key.toLowerCase();
       if (key === 'r') execute('run');
       if (key === 's') execute('submit');
-      if (key === 'f') toggleFlood();
-      if (key === '1') editor.current?.setCode(ch.solution);
-      if (key === '0') editor.current?.setCode(ch.starterCode);
+      if (key === 'f' && ch.flood) toggleFlood();
+      if (key === '1') { if (mine === null) setMine(editor.current?.getCode() ?? ''); editor.current?.setCode(ch.solution); }
+      if (key === '0') { setMine(null); editor.current?.setCode(ch.starterCode); }
       if (key === ' ' && len) { e.preventDefault(); setPlaying((p) => !p); }
     };
     window.addEventListener('keydown', down, true); // capture, so ⌘↵ runs before the editor inserts a newline
@@ -211,14 +213,19 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
           <p className="eyebrow grad-text">{ch.neighborhood}</p>
           <h1>{ch.title}</h1>
           <div className="tags">{ch.tags.map((t) => <span key={t} className="tag">{t}</span>)}</div>
-          {data ? <ch.Description data={data} /> : <p className="muted">Loading Birmingham streets…</p>}
+          {data ? <ch.Description data={data} /> : <p className="muted">{ch.loading ?? 'Loading Birmingham streets…'}</p>}
         </article>
 
         <div className="card code">
           <div className="code-head">
             <span className="eyebrow">Python</span>
             <span className="row">
-              <button className="link-btn quiet" onClick={() => editor.current?.setCode(ch.starterCode)}>Reset</button>
+              <button className="link-btn quiet" onClick={() => { setMine(null); editor.current?.setCode(ch.starterCode); }}>Reset</button>
+              {mine === null ? (
+                <button className="link-btn quiet" title="Load a working solution (1). Your code is kept: press My code to get it back." onClick={() => { setMine(editor.current?.getCode() ?? ''); editor.current?.setCode(ch.solution); }}>Solution</button>
+              ) : (
+                <button className="link-btn quiet" title="Put your own code back" onClick={() => { editor.current?.setCode(mine); setMine(null); }}>My code</button>
+              )}
             </span>
           </div>
           <div className="code-body"><Editor ref={editor} initial={store.get(draftKey) ?? ch.starterCode} /></div>
@@ -249,14 +256,14 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
         <div className="cmap">
           <div ref={mapBox} className="cmap-canvas" />
           <div className="map-legend">
-            <span><i className="sw blue" /> explored</span>
-            <span><i className="sw gold" /> your route</span>
-            <span><i className="sw orange" /> problem / flooded</span>
-            {ghost && <span><i className="sw ghost" /> best route</span>}
+            {(ch.legend ?? ROUTE_LEGEND).map(([sw, label]) => <span key={label}><i className={`sw ${sw}`} /> {label}</span>)}
+            {ghost && <span><i className="sw ghost" /> {ch.ghostLabel ?? 'best route'}</span>}
           </div>
-          <button className={`flood-toggle ${flood ? 'on' : ''}`} aria-pressed={flood} onClick={toggleFlood} title="Flood mode (F)">
-            <span className="knob" /> Flood mode
-          </button>
+          {ch.flood && (
+            <button className={`flood-toggle ${flood ? 'on' : ''}`} aria-pressed={flood} onClick={toggleFlood} title="Flood mode (F)">
+              <span className="knob" /> Flood mode
+            </button>
+          )}
           {len > 0 && (
             <div className="timeline glass">
               <button className="icon-btn solid" onClick={() => (k >= len ? (scrub(0), setPlaying(true)) : setPlaying((p) => !p))} aria-label={playing ? 'Pause' : 'Play'}>
@@ -274,7 +281,7 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
             {rows.length > 0 && <span className={`score ${accepted ? 'ok' : ''}`}>{accepted ? 'Accepted' : `${passed} / ${rows.length} passed`}</span>}
             {fails >= 2 && cur?.verdict && !cur.verdict.ok && (
               <button className="btn ghost small" aria-pressed={ghost} onClick={() => { viz.current?.ghost(!ghost); setGhost(!ghost); }}>
-                {ghost ? 'Hide' : 'Compare with'} best route
+                {ghost ? 'Hide' : 'Compare with'} {ch.ghostLabel ?? 'best route'}
               </button>
             )}
           </div>
@@ -294,13 +301,13 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
             <div className={`verdict ${cur.verdict?.ok ? 'ok' : cur.verdict ? 'bad' : ''}`}>
               <div className="verdict-title">{cur.verdict ? cur.verdict.title : 'Not run (an earlier test failed)'}</div>
               {cur.verdict && <div className="verdict-detail">{cur.verdict.detail}</div>}
-              <div className="tiny">{cur.test.visible || cur.verdict ? cur.test.name : 'Hidden test'}{cur.run ? ` · ${cur.run.ms} ms · ${(cur.run.events.length / 3).toLocaleString()} steps` : ''}</div>
+              <div className="tiny">{cur.test.visible || cur.verdict ? cur.test.name : 'Hidden test'}{cur.run ? ` · ${cur.run.ms} ms` : ''}{cur.run?.events.length ? ` · ${(cur.run.events.length / 3).toLocaleString()} steps` : ''}</div>
               {cur.verdict && !cur.verdict.ok && <button className="link-btn ask-why" onClick={() => askSparks('explain-failure')}>✦ Ask Sparks why →</button>}
             </div>
           ) : (
-            <p className="muted small-p">Press <strong>Run</strong> to try the two sample cases and watch your code explore the streets. <strong>Submit</strong> also runs hidden tests.</p>
+            <p className="muted small-p">Press <strong>Run</strong> to try the two sample cases {ch.intro ?? 'and watch your code explore the streets'}. <strong>Submit</strong> also runs hidden tests.</p>
           )}
-          {accepted && <div className="accepted">All {rows.length} tests passed. Every kid on this list can find their way to fresh food.</div>}
+          {accepted && <div className="accepted">All {rows.length} tests passed. {ch.accepted ?? 'Every kid on this list can find their way to fresh food.'}</div>}
         </div>
       </section>
 
@@ -309,4 +316,12 @@ export default function ChallengePage<D, T extends BaseTest>({ ch, theme, onHome
 }
 
 /** The "explain the idea" button label per challenge. */
-const CONCEPT: Record<string, string> = { 'route-to-fresh-food': 'Explain Dijkstra' };
+const CONCEPT: Record<string, string> = {
+  'route-to-fresh-food': 'Explain Dijkstra',
+  'stray-dog-van': 'Explain nearest neighbor',
+  'water-bill-check': 'Explain streaks',
+  'open-bed': 'Explain the rules',
+};
+
+/** Route to Fresh Food's legend, the default. */
+const ROUTE_LEGEND: [string, string][] = [['blue', 'explored'], ['gold', 'your route'], ['orange', 'problem / flooded']];

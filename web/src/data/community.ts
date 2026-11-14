@@ -14,9 +14,14 @@ export interface Practice {
 
 export const practice: Practice[] = [
   { id: 'route-to-fresh-food', title: 'Route to Fresh Food', skills: ['Graphs', 'Dijkstra', 'Heaps'], difficulty: 'Medium', neighborhood: 'Downtown · Woodlawn', blurb: 'Find the shortest walk from a school to a grocery store on real streets.', open: 'challenge', solvedPct: 41 },
+  { id: 'water-bill-check', title: 'Water Bill Check', skills: ['Arrays', 'Loops', 'Streaks'], difficulty: 'Easy', neighborhood: 'East Lake · citywide', blurb: 'Flag water bills that repeat the same amount 3+ months, so families can ask for a real meter read.', open: 'challenge', solvedPct: 63 },
+  { id: 'open-bed', title: 'Open Bed', skills: ['Hash maps', 'Sorting', 'Greedy'], difficulty: 'Medium', neighborhood: 'Downtown', blurb: 'Give out tonight\'s shelter beds by priority and distance, with pets and family rooms.', open: 'challenge', solvedPct: 37 },
+  { id: 'stray-dog-van', title: 'Stray-Dog Van Route', skills: ['Graphs', 'Greedy', 'Heuristics'], difficulty: 'Hard', neighborhood: 'Downtown · Woodlawn', blurb: 'Plan one animal-control van\'s trip through today\'s stray-dog reports on real streets.', open: 'challenge', solvedPct: 22 },
   { id: 'feed-the-block', title: 'Feed the Block', skills: ['Loops', 'Sorting', 'Greedy'], difficulty: 'Easy', neighborhood: 'West End', blurb: 'Place 5 pickup hubs so the most families can walk to food.', open: 'mission', solvedPct: 68 },
-  { id: 'bus-bunching', title: 'Catch the Bus', skills: ['Queues', 'Simulation'], difficulty: 'Medium', neighborhood: 'Ensley', blurb: 'Simulate a bus line and space out buses so nobody waits 40 minutes.', open: null, solvedPct: 0 },
-  { id: 'open-bed', title: 'Open Bed', skills: ['Hash maps', 'Matching'], difficulty: 'Hard', neighborhood: 'Downtown', blurb: 'Match people to shelter beds each night with made-up data.', open: null, solvedPct: 0 },
+  { id: 'homework-hotspots', title: 'Homework Hotspots', skills: ['Loops', 'Sorting', 'Greedy'], difficulty: 'Easy', neighborhood: 'Ensley', blurb: 'Place free Wi-Fi study spots near homes with no internet.', open: 'mission', solvedPct: 59 },
+  { id: 'warm-nights', title: 'Warm Nights', skills: ['Loops', 'Sorting', 'Greedy'], difficulty: 'Easy', neighborhood: 'Southside', blurb: 'Open warming stations within a short walk of the most households in poverty.', open: 'mission', solvedPct: 52 },
+  { id: 'saturday-shuttle', title: 'Saturday Shuttle', skills: ['Loops', 'Sorting', 'Greedy'], difficulty: 'Easy', neighborhood: 'East Lake', blurb: 'Saturday buses ended in 2026. Place shuttle stops for families with no car.', open: 'mission', solvedPct: 47 },
+  { id: 'farm-stand-route', title: 'Farm Stand Route', skills: ['Loops', 'Sorting', 'Greedy'], difficulty: 'Easy', neighborhood: 'Woodlawn', blurb: 'Pick weekly produce-truck stops for the side of the neighborhood it never reaches.', open: 'mission', solvedPct: 44 },
 ];
 
 export interface Solution {

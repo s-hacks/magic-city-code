@@ -142,7 +142,7 @@ export function createRouteViz(map: MLMap, d: RouteData): Viz<RouteTest> {
       if (!test || !run || !verdict) return;
       clearEnd();
       src('r-pulse').setData(fc([]));
-      const p = run.result?.value ?? [];
+      const p = (run.result?.value as number[] | null) ?? [];
       dim(p.length > 1 && verdict.kind !== 'timeout');
       const bad = (a: number, b: number, c: string, label: string) => {
         src('r-bad').setData(fc([line(segment(a, b), { c })]));

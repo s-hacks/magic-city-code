@@ -1,0 +1,13 @@
+inlet_id,street,lat,lon,homes_downhill,near_bus_stop
+I01,Maple St,33.5712,-86.8104,14,no
+I02,Maple St,33.5718,-86.8091,9,yes
+I03,Cedar Ave,33.5725,-86.8120,22,no
+I04,Cedar Ave,33.5731,-86.8108,6,no
+I05,Pine Rd,33.5698,-86.8077,18,yes
+I06,Pine Rd,33.5704,-86.8065,11,no
+I07,Elm St,33.5741,-86.8133,30,no
+I08,Elm St,33.5747,-86.8121,4,yes
+I09,Birch Way,33.5689,-86.8149,16,no
+I10,Birch Way,33.5683,-86.8137,25,yes
+I11,Lake Dr,33.5756,-86.8082,8,no
+I12,Lake Dr,33.5762,-86.8070,12,no

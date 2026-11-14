@@ -1,0 +1,27 @@
+{
+  "id": "water-bills",
+  "title": "Spot water bills that look wrong",
+  "postedBy": "Resident, East Lake",
+  "posterKind": "Resident",
+  "neighborhood": "East Lake",
+  "summary": "Neighbors keep getting the exact same round-number bill for months. Find the accounts that look estimated, not read.",
+  "details": "Given 12 months of (anonymized) bill amounts, flag accounts whose bills repeat the same round number 3+ months in a row so residents know to ask for a meter read.",
+  "data": "Anonymized bill history (sample CSV)",
+  "skills": ["Arrays", "Sliding window"],
+  "status": "Open",
+  "reward": "Featured on the Magic City Code leaderboard",
+  "due": "Dec 8",
+  "solutions": [
+    {
+      "id": "s1",
+      "author": "tobi",
+      "school": "Parker High",
+      "approach": "Walk through each account’s months in order and count how long the same round amount repeats; flag the account at 3.",
+      "metric": "Flags 2 of the 5 sample accounts",
+      "skills": ["Sliding window"],
+      "votes": 12,
+      "submitted": "1 day ago",
+      "projectDir": "solutions/s1"
+    }
+  ]
+}

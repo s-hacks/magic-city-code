@@ -1,0 +1,48 @@
+{
+  "id": "storm-drains",
+  "title": "Which storm drains should crews clear first?",
+  "postedBy": "Collegeville Neighbors (sample)",
+  "posterKind": "Neighborhood group",
+  "neighborhood": "North Birmingham",
+  "summary": "About a third of the city’s storm inlets need repair. We get one crew day a week. Help us pick the order.",
+  "details": "Rank the clogged inlets in our neighborhood so one crew day clears the ones that flood the most homes and bus stops. Use the 311 reports and what we know about each inlet.",
+  "data": "311 drain reports (CSV, with some repeat reports), inlet list with homes downhill and bus stops (CSV)",
+  "skills": ["Sorting", "Hash maps", "Data cleaning"],
+  "status": "Reviewing",
+  "reward": "Interview with a Shipt engineering team",
+  "due": "Dec 1",
+  "solutions": [
+    {
+      "id": "s1",
+      "author": "maya_codes",
+      "school": "Woodlawn High",
+      "approach": "Count each inlet’s 311 reports with a dict (same day only counts once), weight by homes downhill plus a bonus for bus stops, sort high to low.",
+      "metric": "Top 5 inlets cover 65% of the homes downhill",
+      "skills": ["Hash maps", "Sorting"],
+      "votes": 41,
+      "submitted": "2 days ago",
+      "projectDir": "solutions/s1"
+    },
+    {
+      "id": "s2",
+      "author": "dre.py",
+      "school": "Ramsay High",
+      "approach": "Skip repeat reports, then loop: pick the inlet with the biggest reports x homes score, take it off the list, repeat.",
+      "metric": "Clears the 5 worst inlets in one crew day",
+      "skills": ["Greedy", "Loops"],
+      "votes": 33,
+      "submitted": "3 days ago",
+      "projectDir": "solutions/s2"
+    },
+    {
+      "id": "s3",
+      "author": "jkim",
+      "school": "ASFA",
+      "approach": "Merged duplicate reports by address before ranking; found 22% were repeats.",
+      "metric": "Removed 140 duplicate reports",
+      "skills": ["Strings", "Hash maps"],
+      "votes": 19,
+      "submitted": "4 days ago"
+    }
+  ]
+}

@@ -126,3 +126,18 @@ Format: date, what was asked, what was kept, what was changed or rejected, and w
 - **Asked:** the authorship record, the decisions record, the root README, and header comments on the server test files.
 - **Kept:** the tests' code. Only one comment line was added to each of five test files (`classify`, `coach`, `generator`, `scrub`, `validate`).
 - **Changed:** none in code.
+
+## 14. Three new practice challenges on real Birmingham problems
+- **Date:** 2026-11-14 (not committed yet)
+- **Owner area:** challenges (`web/src/challenges/van`, `bills`, `beds`, `common`), data (`web/scripts/prep_challenges.py`)
+- **Asked:** real problems in Practice with working solutions.
+- **Built:**
+  - **Stray-Dog Van Route** (stray dogs, the #1 complaint to 311): plan a route through sample reports on real Downtown and Woodlawn streets. It must be within 5% of the exact best route (Held-Karp). That cutoff was chosen from measurements: report order is 12–111% too long, nearest neighbor passes the samples but fails a hidden test (+5.8%), and nearest neighbor + 2-opt passes all.
+  - **Water Bill Check** (the 2026 billing breakdown): flag sample accounts whose bill repeats 3+ months in a row; the accounts are placed in real Census block groups.
+  - **Open Bed** (about 400 people unsheltered): give out made-up beds by priority and distance at real community-building locations.
+- **Also:**
+  - Linked the four other working missions in the Practice list.
+  - Added a Solution / My code button beside Reset.
+  - Added optional per-challenge page text (legend, flood switch, messages).
+- **Verified:** `practice.node.test.ts` runs each harness in real Pyodide. Reference solutions pass every test, starters fail, and common wrong answers are caught. All three challenges were also run in the browser.
+- **Not touched:** the City problems seed projects in `web/public/data/city-problems/` (another session is building those).

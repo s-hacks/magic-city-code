@@ -10,4 +10,6 @@ export const SERVER_ROOT = path.resolve(here, "..");
 export const DATA_DIR = path.join(REPO_ROOT, "web/public/data");
 export const MISSIONS_DIR = path.join(DATA_DIR, "missions");
 export const PROBLEMS_SEED_FILE = path.join(DATA_DIR, "problems.seed.json");
+/** City problems: index.json, <id>/problem.json, <id>/starter/**, leaders.seed.json. */
+export const CITY_PROBLEMS_DIR = path.join(DATA_DIR, "city-problems");
 export const STORE_FILE = path.join(SERVER_ROOT, "data/store.json");

@@ -49,7 +49,7 @@ export function checkRoute(t: RouteTest, run: TestRun, d: RouteData, o: RunOptio
   }
   const res = run.result;
   if (!res || res.type !== 'list' || !res.value) return { ok: false, kind: 'type', title: 'Wrong return type', detail: `shortest_path must return a list of corner ids, but it returned ${res?.repr ?? 'nothing'} (${res?.type ?? 'None'}).` };
-  const p = res.value;
+  const p = res.value as number[];
   if (!exp.path.length) {
     if (!p.length) return pass(t, 0, 'No route exists, and you returned []. Correct!');
   } else if (!p.length) return { ok: false, kind: 'empty', title: 'Returned an empty route', detail: 'You returned [] but a walking route exists.' };

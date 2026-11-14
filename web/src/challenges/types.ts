@@ -9,7 +9,7 @@ export interface BaseTest { id: string; name: string; visible: boolean }
 
 export interface Verdict {
   ok: boolean;
-  kind: 'pass' | 'crash' | 'timeout' | 'type' | 'empty' | 'endpoints' | 'gap' | 'closed' | 'longer';
+  kind: 'pass' | 'crash' | 'timeout' | 'type' | 'empty' | 'endpoints' | 'gap' | 'closed' | 'longer' | 'missing' | 'wrong';
   title: string;
   detail: string;
   line?: number; // editor line to underline
@@ -44,4 +44,18 @@ export interface Challenge<D, T extends BaseTest> {
   check(test: T, run: TestRun, data: D, opts: RunOptions): Verdict;
   Description: (p: { data: D }) => ReactNode;
   createViz(map: MLMap, data: D): Viz<T>;
+
+  // Optional page text. Without these the page uses the Route to Fresh Food wording.
+  /** Map legend swatches: [swatch class, label]. */
+  legend?: [string, string][];
+  /** Show the Flood mode switch (only Route to Fresh Food uses it). */
+  flood?: boolean;
+  /** Shown while data loads. */
+  loading?: string;
+  /** Shown before the first run. */
+  intro?: string;
+  /** Shown when every test passes on Submit. */
+  accepted?: string;
+  /** Label of the button that shows the best answer after two failed submits. */
+  ghostLabel?: string;
 }

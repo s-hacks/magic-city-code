@@ -37,7 +37,7 @@ export const problems = [
 export const missions = [
   { id: 'feed-the-block', title: 'Feed the Block', kind: 'Coverage', place: 'West End', partner: 'Jones Valley Teaching Farm · Shipt', task: 'Place 5 grocery pickup hubs so the most families without a car live within a 10‑minute walk.', status: 'Playable' },
   { id: 'catch-the-bus', title: 'Catch the Bus', kind: 'Route', place: 'Ensley', partner: 'Ed Farm', task: 'Improve one bus route within a fixed budget.', status: 'Next' },
-  { id: 'open-bed', title: 'Open Bed', kind: 'Match', place: 'Downtown', partner: 'Firehouse Ministries', task: 'Match people to open shelter beds (made-up data only).', status: 'Next' },
+  { id: 'open-bed', title: 'Open Bed', kind: 'Match', place: 'Downtown', partner: 'Firehouse Ministries', task: 'Give out tonight\'s shelter beds by priority and distance (made-up people, real buildings).', status: 'Playable' },
 ] as const;
 
 export const levels = [

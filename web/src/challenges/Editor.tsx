@@ -16,8 +16,8 @@ export interface EditorHandle {
 }
 
 // One effect sets (or clears) the highlighted line; the field turns it into a decoration.
-const setMark = StateEffect.define<{ line: number; kind: 'run' | 'error' } | null>();
-const markField = StateField.define<DecorationSet>({
+export const setMark = StateEffect.define<{ line: number; kind: 'run' | 'error' } | null>();
+export const markField = StateField.define<DecorationSet>({
   create: () => Decoration.none,
   update(deco, tr) {
     deco = deco.map(tr.changes);
@@ -34,7 +34,7 @@ const markField = StateField.define<DecorationSet>({
 });
 
 // Syntax colors reuse the brand palette: violet keywords, cyan calls, pink strings, gold numbers.
-const highlight = HighlightStyle.define([
+export const highlight = HighlightStyle.define([
   { tag: t.keyword, color: 'var(--violet)', fontWeight: '600' },
   { tag: [t.function(t.propertyName), t.function(t.variableName), t.definition(t.function(t.variableName))], color: 'var(--cyan)' },
   { tag: [t.propertyName, t.variableName], color: 'var(--text)' },
@@ -44,7 +44,7 @@ const highlight = HighlightStyle.define([
   { tag: [t.operator, t.punctuation, t.bracket], color: 'var(--muted)' },
 ]);
 
-const look = EditorView.theme({
+export const look = EditorView.theme({
   '&': { background: 'transparent', color: 'var(--text)', height: '100%' },
   '.cm-scroller': { fontFamily: 'var(--mono)', lineHeight: '1.65' },
   '.cm-content': { caretColor: 'var(--cyan)', padding: '12px 0' },

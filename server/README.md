@@ -35,7 +35,15 @@ When the server starts, Python (Pyodide) begins loading in the background, which
 | `POST /api/missions/:id/approve` | An adult approves the mission. Only now does its problem card show `status: "mission"` and a `missionId`. |
 | `POST /api/coach` | Streams one hint as `text/plain`. The server uses its own copy of the mission by `missionId`. |
 | `GET/POST /api/proposals`, `GET /api/proposals/:id` | Student proposals. The name is cut to the first word; code and summary are scrubbed. |
-| `POST /api/admin/reset` | Back to the seed state (localhost only). See "Demo reset". |
+| `GET /api/city-problems` | City problem cards (no starter or solutions, plus `solutionCount`): posted ones newest first, then the samples in `index.json` order. |
+| `GET /api/city-problems/:id` | The full problem with its starter project. Solutions: chosen first, then most votes. |
+| `POST /api/city-problems` | Post a problem → 201 `{ problem, posterKey }`. Text is scrubbed, `postedBy` cut to the first word. The server builds the starter (`README.md`, `main.py`, `tests/test_main.py`, attached files under `data/`). Only the key's sha256 is stored. |
+| `POST /api/city-problems/:id/solutions` | Submit a project → 201 solution. Checked against `PROJECT_LIMITS`, safe paths and at least one `.py` file. Code is scrubbed. 409 once Solved; Open becomes Reviewing. |
+| `POST /api/city-problems/:id/solutions/:sid/vote` | `{ voterId }` → `{ votes }`. One vote per voter per solution. |
+| `GET /api/city-problems/:id/review` | Header `x-poster-key` → `{ canReview }`. |
+| `POST /api/city-problems/:id/solutions/:sid/choose` | Header `x-poster-key` → the Solved problem. The poster's key, or this computer for the sample problems; otherwise 403. |
+| `GET /api/leaderboard` | Top 10: carried-over points + 300 per chosen solution + 10 per vote, by name and school. |
+| `POST /api/admin/reset` | Back to the seed state (localhost only), city problems, votes and keys included. See "Demo reset". |
 
 ## How missions are made, and the fallbacks
 
@@ -71,7 +79,7 @@ pnpm --filter @mcc/server reset                    # deletes server/data/store.j
 curl -X POST http://127.0.0.1:8787/api/admin/reset   # resets a running server (localhost only)
 ```
 
-Both remove every problem, mission and proposal added at runtime. The seed files are left as they are.
+Both remove every problem, mission, proposal, city problem, solution and vote added at runtime. The seed files are left as they are.
 
 ## Try and test
 

@@ -21,6 +21,6 @@ sandbox
 app.listen(PORT, HOST, () => {
   console.log(
     `Magic City Code server on http://${HOST}:${PORT} — AI ${aiEnabled() ? "on" : "off (fallbacks only)"}, ` +
-      `${store.listMissions().length} mission(s), ${store.listProblems().length} problem card(s)`,
+      `${store.listMissions().length} mission(s), ${store.listProblems().length} problem card(s), ${store.listCityProblems().length} city problem(s)`,
   );
 });

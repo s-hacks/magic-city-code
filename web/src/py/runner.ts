@@ -2,7 +2,8 @@
 export interface TestRun {
   id: string;
   events: number[]; // flat triples: kind (0 push, 1 pop, 2 expand), node, line
-  result: { type: string; value: number[] | null; repr?: string } | null;
+  /** What the student's function returned. `value` is null when it isn't the expected shape (see `repr`). */
+  result: { type: string; value: unknown; repr?: string } | null;
   error: { line: number; message: string } | null;
   timedOut: boolean;
   ms: number;

@@ -12,6 +12,7 @@ export const routeChallenge: Challenge<RouteData, RouteTest> = {
   difficulty: 'Medium',
   neighborhood: 'Downtown · Woodlawn',
   tags: ['Graphs', 'Dijkstra', 'Heaps'],
+  flood: true,
   starterCode,
   solution,
   harness,

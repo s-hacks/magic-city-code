@@ -2,6 +2,8 @@
 // challenge page from these; the server's coach uses them as context and keeps the solution
 // only for its leak guard (the solution is never sent to Claude or shown to students).
 
+import { bedsCoachInfo, billsCoachInfo, vanCoachInfo } from "./practiceChallenges";
+
 export interface ChallengeCoachInfo {
   id: string;
   title: string;
@@ -11,6 +13,8 @@ export interface ChallengeCoachInfo {
   solution: string;
   /** Teacher hints, one per step: nudge, idea, worked example on a different problem. */
   hints: [string, string, string];
+  /** What the hidden tests cover, for the "that passed, now Submit" reply. Default: Route to Fresh Food's. */
+  hiddenTests?: string;
 }
 
 export const routeCoachInfo: ChallengeCoachInfo = {
@@ -73,4 +77,6 @@ def shortest_path(graph, start, goal):
   ],
 };
 
-export const challengeCoachInfo: Record<string, ChallengeCoachInfo> = { [routeCoachInfo.id]: routeCoachInfo };
+export const challengeCoachInfo: Record<string, ChallengeCoachInfo> = Object.fromEntries(
+  [routeCoachInfo, vanCoachInfo, billsCoachInfo, bedsCoachInfo].map((c) => [c.id, c]),
+);

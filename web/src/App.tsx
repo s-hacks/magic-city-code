@@ -1,4 +1,6 @@
 // Routes: / (home: the city map with problem flares), /challenges (practice list + city problems), /report, /mission/:id, /challenge/:id, /proposal/:id.
+// City problems: /problems/:id (detail + solutions), /problems/:id/solve (the workspace),
+// /problems/:id/solutions/:sid (a submitted project, read-only, to run and review).
 // Visiting /?reset=1 wipes this app's saved state (demo reset) and returns to /.
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -13,15 +15,19 @@ import { challenges } from "./challenges";
 // (their own Pyodide worker) load on demand.
 const ChallengePage = lazy(() => import("./pages/Challenge"));
 const ChallengeList = lazy(() => import("./pages/ChallengeList"));
+const WorkspacePage = lazy(() => import("./pages/Workspace"));
 
 function ChallengesRoute() {
   const [params, setParams] = useSearchParams();
   const nav = useNavigate();
-  const tab = params.get("tab") === "city" ? "city" : "practice";
+  const { id } = useParams();
+  const tab = id || params.get("tab") === "city" ? "city" : "practice";
   return (
     <ChallengeList
       tab={tab}
-      onTab={(t) => setParams(t === "city" ? { tab: "city" } : {}, { replace: true })}
+      problemId={id ?? null}
+      sentId={params.get("sent")}
+      onTab={(t) => (id ? nav(t === "city" ? "/challenges?tab=city" : "/challenges") : setParams(t === "city" ? { tab: "city" } : {}, { replace: true }))}
       onHome={() => nav("/")}
       onOpen={(p) => p.open && nav(p.open === "challenge" ? `/challenge/${p.id}` : `/mission/${p.id}`)}
     />
@@ -83,6 +89,9 @@ export function App() {
       <Route path="/city" element={<Navigate to="/" replace />} />
       <Route path="/challenges" element={<ChallengesRoute />} />
       <Route path="/challenge/:id" element={<ChallengeRoute />} />
+      <Route path="/problems/:id" element={<ChallengesRoute />} />
+      <Route path="/problems/:id/solve" element={<WorkspacePage mode="solve" />} />
+      <Route path="/problems/:id/solutions/:sid" element={<WorkspacePage mode="review" />} />
       <Route path="/report" element={<Report />} />
       <Route path="/mission/:id" element={<MissionPage />} />
       <Route path="/proposal/:id" element={<ProposalPage />} />

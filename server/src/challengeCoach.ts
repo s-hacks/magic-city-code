@@ -16,7 +16,7 @@ export function challengeFallback(info: ChallengeCoachInfo, req: Pick<ChallengeC
     return `The checker says: ${v.title}. ${v.detail}${v.line ? ` Look near line ${v.line}.` : ""} ${hint}`;
   }
   if (req.action === "explain-failure" && v?.ok) {
-    return `That test passed: ${v.detail} Press Submit to run the hidden tests too: they include flooded streets, start = goal, and a store you can't reach.`;
+    return `That test passed: ${v.detail} Press Submit to run the hidden tests too: they include ${info.hiddenTests ?? "flooded streets, start = goal, and a store you can't reach"}.`;
   }
   return hint;
 }

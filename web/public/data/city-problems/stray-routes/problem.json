@@ -1,0 +1,38 @@
+{
+  "id": "stray-routes",
+  "title": "Plan a stray-dog pickup route",
+  "postedBy": "Animal control volunteer (sample)",
+  "posterKind": "Nonprofit",
+  "neighborhood": "Woodlawn",
+  "summary": "Stray animals are the #1 complaint to 311. Plan one van’s route through today’s reports.",
+  "details": "Order today’s sightings into one route that starts and ends at the shelter and visits the newest, most-reported spots first.",
+  "data": "Sighting reports with time + location, and the shelter’s location",
+  "skills": ["Graphs", "Heuristics"],
+  "status": "Solved",
+  "reward": "Interview with a Shipt engineering team",
+  "due": "Nov 10",
+  "solutions": [
+    {
+      "id": "s1",
+      "author": "ari_s",
+      "school": "Jackson-Olin High",
+      "approach": "Hot spots (3+ reports) first, then a nearest-neighbor tour: always drive to the closest stop that is left.",
+      "metric": "31% shorter than the old route",
+      "skills": ["Graphs", "Heuristics"],
+      "votes": 58,
+      "chosen": true,
+      "submitted": "Nov 8",
+      "projectDir": "solutions/s1"
+    },
+    {
+      "id": "s2",
+      "author": "maya_codes",
+      "school": "Woodlawn High",
+      "approach": "Priority queue by report age, then shortest path between stops.",
+      "metric": "Newest reports reached 40 min sooner",
+      "skills": ["Heaps", "Dijkstra"],
+      "votes": 37,
+      "submitted": "Nov 7"
+    }
+  ]
+}

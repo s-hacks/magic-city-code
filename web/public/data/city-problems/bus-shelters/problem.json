@@ -1,0 +1,15 @@
+{
+  "id": "bus-shelters",
+  "title": "Where do new bus shelters help the most kids?",
+  "postedBy": "Ensley parent group (sample)",
+  "posterKind": "Neighborhood group",
+  "neighborhood": "Ensley",
+  "summary": "Kids wait for the school bus in the rain. We can fund 4 shelters. Which stops?",
+  "details": "Pick 4 stops that cover the most students, counting how long each waits on average.",
+  "data": "Bus stops, student counts per stop, average wait times",
+  "skills": ["Greedy", "Sorting"],
+  "status": "Open",
+  "reward": "Interview with a Shipt engineering team",
+  "due": "Dec 12",
+  "solutions": []
+}
