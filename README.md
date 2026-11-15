@@ -11,7 +11,9 @@
   <img alt="207 tests passing" src="https://img.shields.io/badge/tests-207%20passing-2ea44f?style=flat-square">
 </p>
 
-<p align="center"><img src="docs/media/landing-hero.jpg" alt="The Magic City Code landing page: Kids code the fix for their own city, over a 3D night view of Birmingham" width="860"></p>
+<p align="center"><img src="docs/media/main.jpg" alt="Route to Fresh Food: Python on the left, a 3D street map on the right showing the search spreading across real Birmingham streets, and 2 of 2 tests passed" width="900"></p>
+
+<p align="center"><sub>Route to Fresh Food: Dijkstra written in Python (left) explores real Birmingham streets (right) until it finds the walk from a school to a grocery store.</sub></p>
 
 <p align="center">
   <a href="#the-idea">The idea</a> ·
@@ -90,8 +92,9 @@ A neighbor posts a problem with its data. Coders open it as a small Python proje
 
 <table>
 <tr>
-<td width="50%"><img src="docs/media/landing-loop.jpg" alt="The landing page loop stage: six steps from a resident's report to a proposal"><br><sub><strong>The loop.</strong> From a neighbor's complaint to a kid's proposal, in six steps.</sub></td>
-<td width="50%"><img src="docs/media/landing-data.jpg" alt="The landing page data stage: Birmingham's problems with sourced numbers"><br><sub><strong>The city.</strong> Six real problems, each with a sourced number.</sub></td>
+<td width="33%"><img src="docs/media/landing-hero.jpg" alt="The landing page: Kids code the fix for their own city, over a 3D night view of Birmingham"><br><sub><strong>The city.</strong> The landing page opens on a 3D Birmingham that lights up as hubs are placed.</sub></td>
+<td width="33%"><img src="docs/media/landing-loop.jpg" alt="The landing page loop stage: six steps from a resident's report to a proposal"><br><sub><strong>The loop.</strong> From a neighbor's complaint to a kid's proposal, in six steps.</sub></td>
+<td width="33%"><img src="docs/media/landing-data.jpg" alt="The landing page data stage: Birmingham's problems with sourced numbers"><br><sub><strong>The data.</strong> Six real problems, each with a sourced number.</sub></td>
 </tr>
 </table>
 
