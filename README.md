@@ -1,9 +1,11 @@
 <h1 align="center">Magic City Code</h1>
 
+<p align="center">🏆 <strong>1st place at Shipt Hacks</strong> 🏆</p>
+
 <p align="center"><strong>Magic City Code helps students learn to code by fixing real Birmingham city problems.</strong></p>
 
 <p align="center">
-  <img alt="Shipt Hacks: 1st place" src="https://img.shields.io/badge/Shipt%20Hacks-1st%20place-f5b800?style=flat-square">
+  <img alt="Shipt Hacks: #1" src="https://img.shields.io/badge/Shipt%20Hacks-%231-f5b800?style=flat-square">
   <img alt="Python in the browser" src="https://img.shields.io/badge/Python-Pyodide-3776ab?style=flat-square">
   <img alt="React 18 and TypeScript" src="https://img.shields.io/badge/React%2018-TypeScript-3178c6?style=flat-square">
   <img alt="3D map: MapLibre and deck.gl" src="https://img.shields.io/badge/3D%20map-MapLibre%20%2B%20deck.gl-7c4dff?style=flat-square">
