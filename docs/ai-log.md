@@ -221,3 +221,11 @@ Team owners: **Pranay** (backend, challenges and tests: server, shared, data, en
 - **Asked:** check the repo against the Shipt Hacks submission notes, and add what is missing.
 - **Added:** `SUBMISSION.md` (what is submitted, the judging criteria mapped to files, open questions), `docs/demo-script.md` (the three-minute demo and the fallback plan), and a plain-words comment at the top of five files that had none (`route/check.ts`, `route/index.tsx`, `route/viz.ts`, `landing/stages/Data.tsx`, `landing/stages/Play.tsx`).
 - **Not changed:** no code logic was touched.
+
+## 23. README rewrite with screenshots and diagrams
+- **Date:** 2026-11-14
+- **Owner area:** `README.md`, `docs/media/`
+- **Asked:** after the Shipt Hacks win, a README with more graphics, in the style of a project page but not as detailed.
+- **Built:** badges, a landing hero image, eleven screenshots taken from the running app (landing, home, a mission after Run, the challenges hub, three challenges after submitting the reference solution, city problems and the workspace), two Mermaid diagrams (the loop and the architecture), and tables for the stack, AI use and limits.
+- **Checked:** every image and link path exists. Every number in the README comes from this repo (207 tests, 7 challenges, 5 missions, 4 city problems, 10,502 street corners).
+- **Kept honest:** the README says the leaderboard solvers and sample posters are made up, and repeats the data limits.
